@@ -1,0 +1,115 @@
+<div class="dropdown">
+  <button class="btn btn-primary dropdown-toggle"
+          type="button"
+          id="dropdownMenuButton"
+          (click)="toggleDropdown()"
+          aria-expanded="dropdownOpen">
+    Select Columns
+  </button>
+  <ul class="dropdown-menu"
+      [ngClass]="{'show': dropdownOpen}"
+      aria-labelledby="dropdownMenuButton">
+    <li *ngFor="let option of options">
+      <div class="form-check m-2">
+        <input class="form-check-input"
+               type="checkbox"
+               [id]="option.id"
+               [(ngModel)]="option.selected"
+               (change)="checkIfAllSelected()">
+        <label class="form-check-label" [for]="option.id">
+          {{ option.label }}
+        </label>
+      </div>
+    </li>
+    <div class="dropdown-divider"></div>
+    <li>
+      <div class="form-check m-2">
+        <input class="form-check-input"
+               type="checkbox"
+               id="all"
+               [(ngModel)]="allSelected"
+               (change)="toggleAll()">
+        <label class="form-check-label">
+          All
+        </label>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<!-- Dynamic table rendering based on selected columns -->
+<table class="table mt-4 table-bordered">
+  <thead>
+  <tr class="table-primary">
+    <th *ngFor="let column of getSelectedColumns()">
+      <div class="header-cell d-inline-flex">
+        <input type="text"
+               [placeholder]="column.label"
+               class="form-control form-control mt-1 filter-cell"
+               [(ngModel)]="column.filter"
+               (ngModelChange)="applyFilter(column.id)">
+        <div class="sorting-controls d-inline-flex">
+          <button *ngIf="sortColumn === column.id && sortOrder === 'asc'"
+                  (click)="sortData(column.id, 'desc')"
+                  class="btn btn-link p-0">
+            <i class="bi bi-arrow-up"></i>
+          </button>
+          <button *ngIf="sortColumn === column.id && sortOrder === 'desc'"
+                  (click)="sortData(column.id, 'asc')"
+                  class="btn btn-link p-0">
+            <i class="bi bi-arrow-down"></i>
+          </button>
+          <button *ngIf="sortColumn !== column.id"
+                  (click)="sortData(column.id, 'asc')"
+                  class="btn btn-link p-0">
+            <i class="bi bi-arrow-up"></i>
+          </button>
+          <button *ngIf="sortColumn !== column.id"
+                  (click)="sortData(column.id, 'desc')"
+                  class="btn btn-link p-0">
+            <i class="bi bi-arrow-down"></i>
+          </button>
+        </div>
+      </div>
+    </th>
+    <th>Actions</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr *ngFor="let row of paginatedData">
+    <td *ngFor="let column of getSelectedColumns()">
+      {{ getRowValue(row, column.id) }}
+    </td>
+    <td>
+      <button class="btn btn-info btn-sm" (click)="viewDetails(row.id)">View Details</button>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between">
+  <div class="d-flex align-items-center">
+    <label for="itemsPerPage" class="mb-0 me-2">Rows per page:</label>
+    <select id="itemsPerPage" class="form-select form-select me-2" [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()">
+      <option *ngFor="let option of itemsPerPageOptions" [value]="option">{{ option }}</option>
+    </select>
+
+    <ng-container *ngIf="itemsPerPage !== 'all'; else allItems">
+      <span>
+        {{ getStartIndex() + 1 }} - {{ getEndIndex() }} of {{ filteredData.length }}
+      </span>
+    </ng-container>
+    <ng-template #allItems>
+      <span>
+        {{ filteredData.length }} items
+      </span>
+    </ng-template>
+  </div>
+
+  <div>
+    <button class="btn btn-secondary" [disabled]="currentPage === 1" (click)="prevPage()">Previous</button>
+    <span class="mx-2">Page {{ currentPage }} of {{ totalPages }}</span>
+    <button class="btn btn-secondary" [disabled]="currentPage === totalPages" (click)="nextPage()">Next</button>
+  </div>
+</div>
