@@ -1,7 +1,7 @@
 // app-routing.module.ts
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
-import {ProjectDetailsComponent} from "../components/project-details/project-details.component";
+import {ProjectComponent} from "../view/project/project.component";
 
 export const routes: Routes = [
   {path: '', redirectTo: 'gitlab-projects', pathMatch: 'full'},
@@ -10,7 +10,7 @@ export const routes: Routes = [
     loadComponent: () => import("../view/projects/projects.component")
       .then((m) => m.ProjectsComponent),
   },
-  { path: 'gitlab-projects/:id', component: ProjectDetailsComponent }
+  { path: 'gitlab-projects/:id', component: ProjectComponent }
 ];
 
 @NgModule({

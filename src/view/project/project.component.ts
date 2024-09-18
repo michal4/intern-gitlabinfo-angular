@@ -5,14 +5,14 @@ import { JsonPipe } from '@angular/common';
 
 @Component({
   selector: 'app-details-page',
-  templateUrl: './project-details.component.html',
+  templateUrl: './project.component.html',
   standalone: true,
   imports: [
     JsonPipe
   ],
-  styleUrls: ['./project-details.component.scss']
+  styleUrls: ['./project.component.scss']
 })
-export class ProjectDetailsComponent implements OnInit {
+export class ProjectComponent implements OnInit {
   rowData: ProjectDataModel | null = null;
 
   constructor(private route: ActivatedRoute) {}
