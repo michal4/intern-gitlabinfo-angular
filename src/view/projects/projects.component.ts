@@ -1,43 +1,38 @@
-import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { NgClass, NgForOf, NgIf } from '@angular/common';
+import {Component, OnInit} from '@angular/core';
+import {NgClass, NgForOf, NgIf} from "@angular/common";
+import {FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {Router} from "@angular/router";
-
-interface ArtifactData {
-  id: number,
-  name: string;
-  defaultBranch: string;
-  parentArtifactId: string;
-  parentVersion: string;
-  error: string;
-  description: string;
-}
+import {ProjectDataModel} from "../../model/project-data.model";
 
 @Component({
-  selector: 'app-dropdown-checkbox',
-  templateUrl: './dropdown-checkbox.component.html',
+  selector: 'app-projects',
   standalone: true,
   imports: [
-    FormsModule,
     NgForOf,
+    NgIf,
+    ReactiveFormsModule,
     NgClass,
-    NgIf
+    FormsModule
   ],
-  styleUrls: ['./dropdown-checkbox.component.scss']
+  templateUrl: './projects.component.html',
+  styleUrl: './projects.component.scss'
 })
-export class DropdownCheckboxComponent implements OnInit {
+export class ProjectsComponent implements OnInit {
+
+  constructor(private router: Router) { }
+
   dropdownOpen = false;
   allSelected = true;
   options = [
-    { id: 'name', label: 'Name', selected: true, filter: '' },
-    { id: 'defaultBranch', label: 'Default Branch', selected: true, filter: '' },
-    { id: 'parentArtifactId', label: 'Parent ArtifactId', selected: true, filter: '' },
-    { id: 'parentVersion', label: 'Parent Version', selected: true, filter: '' },
-    { id: 'error', label: 'Error', selected: true, filter: '' },
-    { id: 'description', label: 'Description', selected: true, filter: '' }
+    {id: 'name', label: 'Name', selected: true, filter: ''},
+    {id: 'defaultBranch', label: 'Default Branch', selected: true, filter: ''},
+    {id: 'parentArtifactId', label: 'Parent ArtifactId', selected: true, filter: ''},
+    {id: 'parentVersion', label: 'Parent Version', selected: true, filter: ''},
+    {id: 'error', label: 'Error', selected: true, filter: ''},
+    {id: 'description', label: 'Description', selected: true, filter: ''}
   ];
 
-  data: ArtifactData[] = [
+  data: ProjectDataModel[] = [
     {
       id: 1,
       name: 'Artifact 1',
@@ -58,16 +53,20 @@ export class DropdownCheckboxComponent implements OnInit {
     }
   ];
 
-  filteredData: ArtifactData[] = [];
-  paginatedData: ArtifactData[] = [];
+  filteredData: ProjectDataModel[] = [];
+  paginatedData: ProjectDataModel[] = [];
   currentPage = 1;
   itemsPerPage: number | 'all' = 5;
-  itemsPerPageOptions = [5, 10, 15, 20, 50, 100, 'all']; // Added 'all'
+  selectedItemsPerPageOption: number | 'all' | 'custom' = 5; // New variable to manage 'custom'
+  customRowsPerPage: number | null = null; // To store custom value
+  itemsPerPageOptions = [5, 10, 15, 20, 50, 100, 'all', 'custom']; // Added 'custom'
   sortColumn: string | null = null;
   sortOrder: 'asc' | 'desc' = 'asc'; // Default sort order
 
   get totalPages() {
-    return this.itemsPerPage === 'all' ? 1 : Math.ceil(this.filteredData.length / (this.itemsPerPage as number));
+    return this.itemsPerPage === 'all'
+      ? 1
+      : Math.ceil(this.filteredData.length / (this.itemsPerPage as number));
   }
 
   ngOnInit(): void {
@@ -96,8 +95,8 @@ export class DropdownCheckboxComponent implements OnInit {
     return this.options.filter(option => option.selected);
   }
 
-  getRowValue(row: ArtifactData, columnId: string) {
-    return row[columnId as keyof ArtifactData];
+  getRowValue(row: ProjectDataModel, columnId: string) {
+    return row[columnId as keyof ProjectDataModel];
   }
 
   saveToCookies() {
@@ -160,6 +159,10 @@ export class DropdownCheckboxComponent implements OnInit {
   updatePaginatedData() {
     if (this.itemsPerPage === 'all') {
       this.paginatedData = this.filteredData;
+    } else if (this.selectedItemsPerPageOption === 'custom' && this.customRowsPerPage) {
+      const start = (this.currentPage - 1) * this.customRowsPerPage;
+      const end = start + this.customRowsPerPage;
+      this.paginatedData = this.filteredData.slice(start, end);
     } else {
       const start = (this.currentPage - 1) * (this.itemsPerPage as number);
       const end = start + (this.itemsPerPage as number);
@@ -168,8 +171,22 @@ export class DropdownCheckboxComponent implements OnInit {
   }
 
   onItemsPerPageChange() {
+    if (this.selectedItemsPerPageOption === 'custom') {
+      this.customRowsPerPage = null; // Reset custom rows per page
+    } else {
+      this.itemsPerPage = this.selectedItemsPerPageOption as number | 'all'; // Assign the selected value
+    }
     this.currentPage = 1; // Reset to the first page
     this.updatePaginatedData();
+  }
+
+  onCustomRowsChange(event: any) {
+    const customValue = parseInt(event.target.value, 10);
+    if (customValue >= 0) {
+      this.customRowsPerPage = customValue;
+      this.itemsPerPage = customValue; // Update itemsPerPage with the custom value
+      this.updatePaginatedData();
+    }
   }
 
   prevPage() {
@@ -187,19 +204,18 @@ export class DropdownCheckboxComponent implements OnInit {
   }
 
   getStartIndex(): number {
-    return (this.currentPage - 1) * (this.itemsPerPage as number);
+    return (this.currentPage - 1) * (this.customRowsPerPage || this.itemsPerPage as number);
   }
 
   getEndIndex(): number {
-    const endIndex = this.currentPage * (this.itemsPerPage as number);
+    const endIndex = this.currentPage * (this.customRowsPerPage || this.itemsPerPage as number);
     return endIndex > this.filteredData.length ? this.filteredData.length : endIndex;
   }
 
-  constructor(private router: Router) { }
-
-  // Navigate to the details page, passing the project ID as a route parameter
-  viewDetails(projectId: number): void {
-    const url = `/project/${projectId}`;
+  viewDetails(row: ProjectDataModel): void {
+    const rowData = encodeURIComponent(JSON.stringify(row));
+    const url = `/gitlab-projects/details?data=${rowData}`;
     window.open(url, '_blank');
   }
+
 }
