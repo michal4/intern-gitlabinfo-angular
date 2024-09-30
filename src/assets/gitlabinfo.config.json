@@ -1,0 +1,7 @@
+{
+  "mode": "DEV",
+  "language": "eng",
+  "apiBasePath": "http://localhost:8080",
+  "checkUpdateInterval": "2000",
+  "loadingHttpTimeout": "1000"
+}

@@ -1,18 +1,15 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { ProjectsComponent } from '../view/projects/projects.component';
-import { ProjectComponent } from '../view/project/project.component';
+import {Component} from '@angular/core';
 import packageJson from '../../package.json';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'], // Fixed from `styleUrl` to `styleUrls`
   standalone: true,
-  imports: [RouterOutlet, ProjectsComponent, ProjectComponent] // Import necessary components
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+  imports: [RouterModule]
 })
 export class AppComponent {
   title = 'intern-gitlabinfo-angular';
   appVersion: string = packageJson.version;
-  restapiVersion: string = packageJson.dependencies["syntea-syndoc2-restapi-client"];
 }

@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { ProjectDataModel } from '../../model/project-data.model';
-import { JsonPipe } from '@angular/common';
+import {Component, OnInit} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {JsonPipe} from '@angular/common';
+import {GitLabProject} from 'intern-gitlabinfo-openapi-angular'; 
 
 @Component({
   selector: 'app-details-page',
@@ -13,9 +13,10 @@ import { JsonPipe } from '@angular/common';
   styleUrls: ['./project.component.scss']
 })
 export class ProjectComponent implements OnInit {
-  rowData: ProjectDataModel | null = null;
+  rowData: GitLabProject | null = null;
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute) {
+  }
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe(params => {
@@ -25,7 +26,7 @@ export class ProjectComponent implements OnInit {
 
         // Set the document title based on the project ID
         if (this.rowData) {
-          document.title = `Project details - ${this.rowData.id}`;
+          document.title = `Project details - ${this.rowData.projectId}`;
         } else {
           document.title = 'Project Details';
         }
