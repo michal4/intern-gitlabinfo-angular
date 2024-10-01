@@ -38,48 +38,100 @@
     </div>
   </div>
 
-  <div class="dropdown">
-    <button class="btn btn-primary dropdown-toggle"
-            type="button"
-            id="dropdownMenuButton"
-            (click)="toggleDropdown(DropdownType.COLUMNS)"
-            aria-expanded="dropdownOpen">
-      <i class="bi bi-layout-three-columns"></i>
-      Select columns
-    </button>
-    <ul class="dropdown-menu"
-        [ngClass]="{'show': dropdownState.columnsOpen}"
-        aria-labelledby="dropdownMenuButton">
-      <li *ngFor="let option of columns">
-        <div class="form-check m-2">
-          <input class="form-check-input"
-                 type="checkbox"
-                 [id]="option.id"
-                 [checked]="option.selected"
-                 (change)="toggleColumnSelection(option.id)">
-          <label class="form-check-label" [for]="option.id">
-            {{ option.label }}
-          </label>
-        </div>
-      </li>
-      <div class="dropdown-divider"></div>
-      <li>
-        <div class="form-check m-2">
-          <input class="form-check-input"
-                 type="checkbox"
-                 id="all"
-                 [checked]="allColumnsSelected"
-                 (change)="toggleAllColumnsSelection()">
-          <label class="form-check-label">
-            All
-          </label>
-        </div>
-      </li>
-    </ul>
+  <div class="d-inline-flex align-items-center">
+    <div class="d-inline-flex align-items-center m-2">
+      {{ this.filteredData.length }} projects
+    </div>
+
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle"
+              type="button"
+              id="dropdownMenuButton"
+              (click)="toggleDropdown(DropdownType.COLUMNS)"
+              aria-expanded="dropdownOpen">
+        <i class="bi bi-layout-three-columns"></i>
+        Select columns
+      </button>
+      <ul class="dropdown-menu"
+          [ngClass]="{'show': dropdownState.columnsOpen}"
+          aria-labelledby="dropdownMenuButton">
+        <li *ngFor="let option of columns">
+          <div class="form-check m-2">
+            <input class="form-check-input"
+                   type="checkbox"
+                   [id]="option.id"
+                   [checked]="option.selected"
+                   (change)="toggleColumnSelection(option.id)">
+            <label class="form-check-label" [for]="option.id">
+              {{ option.label }}
+            </label>
+          </div>
+        </li>
+        <div class="dropdown-divider"></div>
+        <li>
+          <div class="form-check m-2">
+            <input class="form-check-input"
+                   type="checkbox"
+                   id="all"
+                   [checked]="allColumnsSelected"
+                   (change)="toggleAllColumnsSelection()">
+            <label class="form-check-label">
+              All
+            </label>
+          </div>
+        </li>
+      </ul>
+    </div>
+
   </div>
 </div>
+<!-- Pagination -->
+<div class="d-flex align-items-center">
+  <div class="d-flex align-items-center mx-3">
+    <label class="mb-0 me-2">Rows per page:</label>
+    <!-- Dropdown for selecting items per page -->
+    <select class="form-control pagination-select"
+            [(ngModel)]="selectedItemsPerPageOption"
+            (change)="onItemsPerPageChange()">
+      <option *ngFor="let option of itemsPerPageOptions"
+              [ngValue]="option">
+        {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
+      </option>
+    </select>
 
-<p>Found {{ this.filteredData.length }} projects</p>
+
+    <!-- Input field for custom items per page, only shown when 'custom' is selected -->
+    <div *ngIf="selectedItemsPerPageOption === 'custom'">
+      <input type="number"
+             min="0"
+             class="form-control input-group-sm mx-2"
+             [(ngModel)]="customRowsPerPage"
+             (change)="onCustomRowsChange($event)"
+             placeholder="Enter rows per page..."/>
+    </div>
+    <ng-template #allItems>
+      <span>
+        {{ paginatedData.length }} items
+      </span>
+    </ng-template>
+  </div>
+
+  <div>
+    <button class="btn btn-light"
+            [disabled]="currentPage === 1"
+            (click)="changePage(-1)">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <span class="mx-2">
+      Page {{ currentPage }} of {{ totalPages }}
+    </span>
+    <button class="btn btn-light"
+            [disabled]="currentPage === totalPages"
+            (click)="changePage(+1)">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</div>
 
 <!-- Dynamic table rendering based on selected columns -->
 <table class="table mt-4 table-bordered table-fixed">
@@ -237,52 +289,5 @@
   </tbody>
 </table>
 
-<!-- Pagination -->
-<div class="d-flex justify-content-between">
-  <div class="d-flex align-items-center">
-    <label class="mb-0 me-2">Rows per page:</label>
-    <!-- Dropdown for selecting items per page -->
-    <select class="form-control pagination-select"
-            [(ngModel)]="selectedItemsPerPageOption"
-            (change)="onItemsPerPageChange()">
-      <option *ngFor="let option of itemsPerPageOptions"
-              [ngValue]="option">
-        {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
-      </option>
-    </select>
-
-
-    <!-- Input field for custom items per page, only shown when 'custom' is selected -->
-    <div *ngIf="selectedItemsPerPageOption === 'custom'">
-      <input type="number"
-             min="0"
-             class="form-control input-group-sm mx-2"
-             [(ngModel)]="customRowsPerPage"
-             (change)="onCustomRowsChange($event)"
-             placeholder="Enter rows per page..."/>
-    </div>
-    <ng-template #allItems>
-      <span>
-        {{ paginatedData.length }} items
-      </span>
-    </ng-template>
-  </div>
-
-  <div>
-    <button class="btn btn-secondary"
-            [disabled]="currentPage === 1"
-            (click)="changePage(-1)">
-      Previous
-    </button>
-    <span class="mx-2">
-      Page {{ currentPage }} of {{ totalPages }}
-    </span>
-    <button class="btn btn-secondary"
-            [disabled]="currentPage === totalPages"
-            (click)="changePage(+1)">
-      Next
-    </button>
-  </div>
-</div>
 </body>
 </html>
