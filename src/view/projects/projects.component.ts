@@ -1,11 +1,11 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 import {NgClass, NgForOf, NgIf} from "@angular/common";
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {GitLabProject} from 'intern-gitlabinfo-openapi-angular';
 import {ProjectService} from '../../service/project.service';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from '../../service/cookie.service';
-import {Subject} from 'rxjs';
+import {Subject, takeUntil} from 'rxjs';
 
 interface PossibleFilter {
   name: string;
@@ -41,12 +41,19 @@ export enum DropdownType {
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
 })
-export class ProjectsComponent implements OnInit {
+export class ProjectsComponent implements OnInit, OnDestroy {
+
+  private destroy$ = new Subject<void>();
+
   // Observables for tracking changes
   private currentPageSubject = new Subject<number>();
   private itemsPerPageSubject = new Subject<number | 'all'>();
   private sortOrderSubject = new Subject<'asc' | 'desc'>();
   private sortColumnSubject = new Subject<string | null>();
+  private allColumnsSelectedSubject = new Subject<boolean>();
+  private allKindsSelectedSubject = new Subject<boolean>();
+  private allErrorsSelectedSubject = new Subject<boolean>();
+
 
   // Column identifiers
   readonly columnsId = {
@@ -76,20 +83,23 @@ export class ProjectsComponent implements OnInit {
   possibleErrors: PossibleError[] = [];
 
   // Selection states
-  allColumnsSelected = true;
-  allKindsSelected = true;
-  allErrorsSelected = true;
+  allColumnsSelected: boolean = true;
+  allKindsSelected: boolean = true;
+  allErrorsSelected: boolean = true;
 
   // Pagination
-  currentPage = 1;
-  itemsPerPage: number | 'all' = DEFAULT_ITEMS_PER_PAGE;
-  selectedItemsPerPageOption: number | 'all' | 'custom' = DEFAULT_ITEMS_PER_PAGE;
+  currentPage: number | undefined;
+  itemsPerPage: number | 'all' | undefined | any;
+  selectedItemsPerPageOption: number | 'all' | 'custom' | undefined;
   customRowsPerPage: number | null = null;
-  itemsPerPageOptions = [5, 10, 15, 20, 50, 100, 'all', 'custom'];
+  itemsPerPageOptions: any = [5, 10, 15, 20, 50, 100, 'all', 'custom'];
 
   // Sorting
-  sortColumn: string | null = null;
-  sortOrder: 'asc' | 'desc' = DEFAULT_SORT_ORDER;
+  sortColumn: string | null | undefined;
+  sortOrder: 'asc' | 'desc' | undefined;
+
+  commonFilter: string | undefined;
+  useRegex: boolean | undefined;
 
   columns = [
     {id: this.columnsId.NAME, label: 'Name', selected: true, filter: ''},
@@ -98,35 +108,50 @@ export class ProjectsComponent implements OnInit {
     {id: this.columnsId.PARENT_VERSION, label: 'Parent Version', selected: true, filter: ''},
     {id: this.columnsId.ERRORS, label: 'Errors', selected: true, filter: ''},
     {id: this.columnsId.KIND, label: 'Kind', selected: true, filter: ''},
-    {id: this.columnsId.DESCRIPTION, label: 'Description', selected: true, filter: ''}
+    {id: this.columnsId.DESCRIPTION, label: 'Description', selected: true, filter: ''},
   ];
   private columnSubjects: { [key: string]: Subject<void> } = {};
+  private kindSubjects: { [key: string]: Subject<void> } = {};
 
   constructor(private projectService: ProjectService,
-              private cookieService: CookieService) {
+              private cookieService: CookieService
+  ) {
   }
 
   ngOnInit() {
-    this.loadProjects();          // Step 1: Load projects from the service
-    this.setCookiedValues();     // Step 2: Retrieve data from cookies
+    this.setInitialValues();      // Retrieve data from cookies
+    this.loadProjects();          // Load projects from the service
 
-    // Subscribe to changes and update cookies accordingly
-    this.currentPageSubject.subscribe(() => this.updateCookie());
-    this.itemsPerPageSubject.subscribe(() => this.updateCookie());
-    this.sortOrderSubject.subscribe(() => this.updateCookie());
-    this.sortColumnSubject.subscribe(() => this.updateCookie());
+    this.subscribeToChanges();
 
-    // Initialize column subject subscriptions
+    this.updateAllColumnsSelected();
+    this.updateAllKindsSelected();
+    this.updateAllErrorsSelected();
+  }
+
+  subscribeToChanges() {
+    this.currentPageSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    this.itemsPerPageSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    this.sortOrderSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    this.sortColumnSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+
+    this.allColumnsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    this.allKindsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    this.allErrorsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+
     this.columns.forEach(column => {
       if (!this.columnSubjects[column.id]) {
         this.columnSubjects[column.id] = new Subject<void>();
       }
-      this.columnSubjects[column.id].subscribe(() => this.updateCookie());
+      this.columnSubjects[column.id].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     });
 
-    // Step 3: Apply filters, sort, and select/deselect based on cookie data
-    this.applyFilters();          // Apply filters after loading projects and setting cookie values
-    this.updatePaginatedData();  // Ensure data is paginated based on initial state
+    this.possibleKinds.forEach(kind => {
+      if (!this.kindSubjects[kind.name]) {
+        this.kindSubjects[kind.name] = new Subject<void>();
+      }
+      this.kindSubjects[kind.name].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    });
   }
 
   loadProjects() {
@@ -134,6 +159,7 @@ export class ProjectsComponent implements OnInit {
       (data: GitLabProject[]) => {
         this.projects = data;
         this.filteredData = [...this.projects];
+        this.applyFilters();
         this.setPossibleKinds();
         this.setPossibleErrors();
       },
@@ -143,88 +169,108 @@ export class ProjectsComponent implements OnInit {
     );
   }
 
-  setCookiedValues() {
+  // Setting itemsPerPage based on the cookie or the first option in itemsPerPageOptions
+  setInitialValues() {
+    // current page number
     this.currentPage = Number(this.cookieService.getCookie("page")) || 1;
+
+    // items per page
     const itemsPerPageCookie = this.cookieService.getCookie("size");
-    this.selectedItemsPerPageOption = itemsPerPageCookie ? (isNaN(Number(itemsPerPageCookie)) ? "all" : Number(itemsPerPageCookie)) : DEFAULT_ITEMS_PER_PAGE;
+    if (itemsPerPageCookie) {
+      if (itemsPerPageCookie === 'custom' || itemsPerPageCookie === 'all') {
+        this.selectedItemsPerPageOption = itemsPerPageCookie;
+      } else {
+        const parsedValue = Number(itemsPerPageCookie);
+        this.selectedItemsPerPageOption = isNaN(parsedValue) ? undefined : parsedValue;
+      }
+    } else {
+      this.selectedItemsPerPageOption = this.itemsPerPageOptions[0];
+    }
+    this.itemsPerPage = this.selectedItemsPerPageOption === 'all' || this.selectedItemsPerPageOption === 'custom'
+      ? this.selectedItemsPerPageOption
+      : (this.selectedItemsPerPageOption as number || DEFAULT_ITEMS_PER_PAGE); // Assign number or fallback
 
-    //sort
-    const sortBy = this.cookieService.getCookie("sortBy");
-    const sortDest = this.cookieService.getCookie("sortDest");
+    // Sorting
+    this.sortColumn = this.cookieService.getCookie("sortBy") || null;
+    this.sortOrder = (this.cookieService.getCookie("sortDest") as 'asc' | 'desc') || DEFAULT_SORT_ORDER;
 
-
-
+    // columns
     const selectedColumns = this.cookieService.getCookie("selectedColumns");
     if (selectedColumns) {
       const selectedColumnIds = selectedColumns.split(",");
+
       this.columns.forEach(column => {
         column.selected = selectedColumnIds.includes(column.id);
       });
     }
-
-    const filterValues = {
-      [this.columnsId.NAME]: this.cookieService.getCookie(this.columnsId.NAME),
-      [this.columnsId.DEFAULT_BRANCH]: this.cookieService.getCookie(this.columnsId.DEFAULT_BRANCH),
-      [this.columnsId.PARENT_ARTIFACT_ID]: this.cookieService.getCookie(this.columnsId.PARENT_ARTIFACT_ID),
-      [this.columnsId.PARENT_VERSION]: this.cookieService.getCookie(this.columnsId.PARENT_VERSION),
-      [this.columnsId.DESCRIPTION]: this.cookieService.getCookie(this.columnsId.DESCRIPTION),
-    };
+    //
+    // // kinds
+    // const selectedKinds = this.cookieService.getCookie(this.columnsId.KIND);
+    // if (selectedKinds) {
+    //   const selectedKindNames = selectedKinds.split(",");
+    //   this.possibleKinds.forEach(kind => kind.selected = selectedKindNames.includes(kind.name));
+    // }
 
     this.columns.forEach(column => {
-      column.filter = filterValues[column.id] || ''; // Default to empty string if undefined
+      column.filter = this.cookieService.getCookie(column.id) || '';
     });
 
-    this.applySelectedFilters();
-    this.updatePaginatedData(); // Ensure pagination is set up after loading data
-    this.applyFilters(); // Apply filters after setting values
-  }
-
-  applySelectedFilters() {
-    const selectedKinds = this.cookieService.getCookie(this.columnsId.KIND);
-    if (selectedKinds) {
-      const selectedKindNames = selectedKinds.split(",");
-      this.possibleKinds.forEach(kind => kind.selected = selectedKindNames.includes(kind.name));
-    }
-
-    const selectedErrors = this.cookieService.getCookie(this.columnsId.ERRORS);
-    if (selectedErrors) {
-      const selectedErrorCodes = selectedErrors.split(",");
-      this.possibleErrors.forEach(error => error.selected = selectedErrorCodes.includes(error.code));
-    }
   }
 
   updateCookie() {
-    this.cookieService.setCookie("page", this.currentPage.toString());
-    this.cookieService.setCookie("size", this.itemsPerPage.toString());
+    if (this.currentPage !== undefined && this.currentPage !== null) {
+      this.cookieService.setCookie("page", this.currentPage.toString());
+    }
+    if (this.itemsPerPage !== undefined && this.itemsPerPage !== null) {
+      this.cookieService.setCookie("size", this.itemsPerPage.toString());
+    }
+    if (this.sortOrder !== undefined && this.sortOrder !== null) {
+      this.cookieService.setCookie("sortDest", this.sortOrder.toString());
+    }
     this.cookieService.setCookie("sortBy", this.sortColumn || '');
-    this.cookieService.setCookie("sortDest", this.sortOrder.toString());
 
-    // Save selected columns
-    const selectedColumnIds = this.columns
+    // selected columns
+    let selectedColumnIds = this.columns
       .filter(col => col.selected)
       .map(col => col.id).join(",");
+    if (selectedColumnIds.length === 0) {
+      selectedColumnIds = '-';
+    }
     this.cookieService.setCookie("selectedColumns", selectedColumnIds);
 
     // selected kinds
     const selectedKinds = this.possibleKinds
       .filter(kind => kind.selected)
       .map(kind => kind.name).join(",");
-    this.cookieService.setCookie(this.columnsId.KIND, selectedKinds);
+    this.cookieService.setCookie(this.columnsId.KIND, selectedKinds.length ? selectedKinds : '-');
 
     // selected errors
     const selectedErrors = this.possibleErrors
       .filter(error => error.selected)
       .map(error => error.code).join(",");
-    this.cookieService.setCookie(this.columnsId.ERRORS, selectedErrors);
+    this.cookieService.setCookie(this.columnsId.ERRORS, selectedErrors.length ? selectedErrors : '-');
 
-    // filters
+    // common filter
+    if (this.commonFilter !== undefined && this.commonFilter !== null) {
+      this.cookieService.setCookie("commonFilter", this.commonFilter);
+    }
+    // use regex
+    if (this.useRegex !== undefined) {
+      this.cookieService.setCookie("useRegex", this.useRegex.toString());
+    }
     // todo
-
   }
 
   setPossibleKinds() {
+    const cookiedKinds = this.cookieService.getCookie(this.columnsId.KIND);
     const kindsSet = new Set(this.projects.map(project => project.kind));
-    this.possibleKinds = Array.from(kindsSet).map(kind => ({name: kind, selected: true}));
+    for (const kind of kindsSet) {
+      const possibleKind: PossibleFilter = {
+        name: kind,
+        selected: (this.allKindsSelected || (cookiedKinds != null && cookiedKinds.includes(kind))),
+      };
+      this.possibleKinds.push(possibleKind);
+    }
   }
 
   setPossibleErrors() {
@@ -267,68 +313,130 @@ export class ProjectsComponent implements OnInit {
     this.dropdownState[type] = !this.dropdownState[type];
   }
 
-  toggleAllOptions(target: any) {
-    let options;
-    let allSelected;
-    switch (target) {
-      case this.columnsId.KIND: {
-        options = this.possibleKinds;
-        allSelected = this.allKindsSelected;
-        break;
-      }
-      case this.columnsId.ERRORS: {
-        options = this.possibleErrors;
-        allSelected = this.allErrorsSelected;
-        break;
-      }
-      default:
-        options = this.columns;
-        allSelected = this.allColumnsSelected;
-    }
-    options.forEach(option => option.selected = allSelected);
-    this.updateCookie();
+  updateAllColumnsSelected() {
+    this.allColumnsSelected = this.columns.every(col => col.selected);
+    this.allColumnsSelectedSubject.next(this.allColumnsSelected);
   }
+
+  updateAllKindsSelected() {
+    this.allKindsSelected = this.possibleKinds.every(kind => kind.selected);
+    this.allKindsSelectedSubject.next(this.allKindsSelected);
+  }
+
+  updateAllErrorsSelected() {
+    this.allErrorsSelected = this.possibleErrors.every(error => error.selected);
+    this.allErrorsSelectedSubject.next(this.allErrorsSelected);
+  }
+
+  toggleAllColumnsSelection() {
+    this.allColumnsSelected = !this.allColumnsSelected;
+    this.columns.forEach(col => col.selected = this.allColumnsSelected);
+    this.allColumnsSelectedSubject.next(this.allColumnsSelected);
+  }
+
+  toggleAllKindsSelection() {
+    this.allKindsSelected = !this.allKindsSelected;
+    this.possibleKinds.forEach(kind => kind.selected = this.allKindsSelected);
+    this.allKindsSelectedSubject.next(this.allKindsSelected);
+  }
+
+  toggleAllErrorsSelection() {
+    this.allErrorsSelected = !this.allErrorsSelected;
+    this.possibleErrors.forEach(error => error.selected = this.allErrorsSelected);
+    this.allErrorsSelectedSubject.next(this.allErrorsSelected);
+  }
+
+  toggleColumnSelection(columnId: string) {
+    const column = this.columns.find(col => col.id === columnId);
+    if (column) {
+      column.selected = !column.selected;
+      this.columnSubjects[columnId].next();
+      this.allColumnsSelected = this.columns.every(col => col.selected);
+      this.allColumnsSelectedSubject.next(this.allColumnsSelected);
+    }
+  }
+
+  toggleKindSelection(kindName: string) {
+    const kind = this.possibleKinds.find(k => k.name === kindName);
+    if (kind) {
+      kind.selected = !kind.selected;
+      if (!this.kindSubjects[kindName]) {
+        this.kindSubjects[kindName] = new Subject<void>();
+      }
+      this.kindSubjects[kindName].next();
+
+      this.allKindsSelected = this.possibleKinds.every(k => k.selected);
+      this.allKindsSelectedSubject.next(this.allKindsSelected);
+      this.updateCookie();
+    }
+  }
+
 
   onItemsPerPageChange() {
     if (this.selectedItemsPerPageOption === 'custom') {
-      this.customRowsPerPage = null; // Reset custom rows per page
+      this.customRowsPerPage = null;
     } else {
-      this.itemsPerPage = this.selectedItemsPerPageOption as number | 'all'; // Assign the selected value
+      this.itemsPerPage = this.selectedItemsPerPageOption as number | 'all';
     }
-    this.currentPage = 1; // Reset to the first page
-    this.itemsPerPageSubject.next(this.itemsPerPage); // Notify the change
+    if (this.itemsPerPage === undefined || this.itemsPerPage === null) {
+      this.itemsPerPage = DEFAULT_ITEMS_PER_PAGE;
+    }
+    this.currentPage = 1;
+    this.itemsPerPageSubject.next(this.itemsPerPage);
     this.updatePaginatedData();
   }
 
   changePage(increment: number) {
+    this.currentPage = this.currentPage ?? 1;
     const newPage = this.currentPage + increment;
     if (newPage > 0 && newPage <= this.totalPages) {
       this.currentPage = newPage;
-      this.currentPageSubject.next(this.currentPage); // Notify the change
+      this.currentPageSubject.next(this.currentPage);
       this.updatePaginatedData();
     }
   }
 
-  sortData(columnId: string | null, order: 'asc' | 'desc') {
-    if (columnId) {
-      this.sortColumn = columnId;
-      this.sortOrder = order;
+  sortData(columnId: string | null, dist: string | null) {
+    if (columnId !== null && dist !== null) {
+      if (columnId) {
+        this.sortColumn = columnId;
+        this.sortOrder = dist === 'asc' ? 'asc' : 'desc';
 
-      this.sortColumnSubject.next(this.sortColumn); // Notify the change
-      this.sortOrderSubject.next(this.sortOrder); // Notify the change
+        this.sortColumnSubject.next(this.sortColumn);
+        this.sortOrderSubject.next(this.sortOrder);
 
-      this.filteredData.sort((a, b) => {
-        const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
-        const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
-        return (valueA > valueB ? 1 : -1) * (order === 'asc' ? 1 : -1);
-      });
+        this.filteredData.sort((a, b) => {
+          const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
+          const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
+          return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+        });
+      }
     }
     this.updatePaginatedData();
   }
 
   updatePaginatedData() {
-    const startIndex = (this.currentPage - 1) * (this.itemsPerPage === 'all' ? this.filteredData.length : this.itemsPerPage as number);
-    const endIndex = this.currentPage * (this.itemsPerPage === 'all' ? this.filteredData.length : this.itemsPerPage as number);
+    this.currentPage = this.currentPage ?? 1;
+    let endIndex: number;
+    endIndex = this.currentPage * (this.itemsPerPage === 'all' ? this.filteredData.length : this.itemsPerPage as number);
+    if (endIndex > this.filteredData.length) {
+      endIndex = this.filteredData.length;
+    }
+    let startIndex: number;
+    if (this.currentPage > 1) {
+      startIndex = (this.currentPage - 1) * (this.itemsPerPage === 'all' ? this.filteredData.length : this.itemsPerPage as number);
+    } else {
+      startIndex = 1;
+    }
+    if (startIndex > endIndex) {
+      startIndex = endIndex - this.itemsPerPage;
+      this.currentPage = this.totalPages
+    }
+    if (startIndex < 1) {
+      startIndex = 1;
+    }
+    // console.log('curr index=' + this.currentPage + ' items=' + this.filteredData.length + ' per page=' + this.itemsPerPage)
+    // console.log('start index=' + startIndex + ' end index=' + endIndex)
     this.paginatedData = this.filteredData.slice(startIndex, endIndex);
   }
 
@@ -360,18 +468,48 @@ export class ProjectsComponent implements OnInit {
   applyFilters() {
     const nameFilter = this.columns.find(col => col.id === this.columnsId.NAME)?.filter || '';
     const defaultBranchFilter = this.columns.find(col => col.id === this.columnsId.DEFAULT_BRANCH)?.filter || '';
+    const parentArtifactIdFilter = this.columns.find(col => col.id === this.columnsId.PARENT_ARTIFACT_ID)?.filter || '';
+    const parentVersionFilter = this.columns.find(col => col.id === this.columnsId.PARENT_VERSION)?.filter || '';
+    const descriptionFilter = this.columns.find(col => col.id === this.columnsId.DESCRIPTION)?.filter || '';
+
+    this.cookieService.setCookie(this.columnsId.NAME, nameFilter.toLowerCase())
+    this.cookieService.setCookie(this.columnsId.DEFAULT_BRANCH, defaultBranchFilter.toLowerCase())
+    this.cookieService.setCookie(this.columnsId.PARENT_ARTIFACT_ID, parentArtifactIdFilter.toLowerCase())
+    this.cookieService.setCookie(this.columnsId.PARENT_VERSION, parentVersionFilter.toLowerCase())
+    this.cookieService.setCookie(this.columnsId.DESCRIPTION, descriptionFilter.toLowerCase())
+
+    // console.log('kinds=' + this.possibleKinds)
+    // console.log('allKindsSelected=' + this.allKindsSelected)
 
     this.filteredData = this.projects.filter(project => {
-      const matchesName = project.name.toLowerCase().includes(nameFilter.toLowerCase());
-      const matchesDefaultBranch = project.defaultBranch.name.toLowerCase().includes(defaultBranchFilter.toLowerCase());
+      const matchesName = project.name?.toLowerCase().includes(nameFilter.toLowerCase());
+      const matchesDefaultBranch = project.defaultBranch?.name?.toLowerCase().includes(defaultBranchFilter.toLowerCase());
+      const matchesParentArtifactId = project.defaultBranch?.parent?.artifactId?.toLowerCase().includes(parentArtifactIdFilter.toLowerCase());
+      const matchesParentVersion = project.defaultBranch?.parent?.version?.toLowerCase().includes(parentVersionFilter.toLowerCase());
+      const matchesDescription = project.description?.toLowerCase().includes(descriptionFilter.toLowerCase());
 
-      const matchesKind = this.possibleKinds.length === 0 || this.possibleKinds.some(kind => kind.selected && project.kind === kind.name);
-      const matchesErrors = this.possibleErrors.length === 0 || this.possibleErrors.some(error => error.selected && project.errors?.map(e => e.code).includes(error.code));
+      const matchesKind =
+        this.possibleKinds.length === 0 ||
+        this.allKindsSelected ||
+        this.possibleKinds.some(kind => kind.selected && project.kind === kind.name);
+      const matchesErrors =
+        this.possibleErrors.length === 0 ||
+        this.allErrorsSelected ||
+        this.possibleErrors.some(error => error.selected && project.errors?.some(e => e.code === error.code));
 
-      return matchesName && matchesDefaultBranch && matchesKind && matchesErrors;
+      return matchesName &&
+        matchesDefaultBranch &&
+        matchesParentArtifactId &&
+        matchesParentVersion &&
+        matchesDescription &&
+        matchesKind &&
+        matchesErrors;
     });
 
-    this.updatePaginatedData();
+    const sortBy = this.cookieService.getCookie('sortBy')
+    const sortDest = this.cookieService.getCookie('sortDest')
+
+    this.sortData(sortBy, sortDest);
   }
 
   protected readonly DropdownType = DropdownType;
@@ -394,4 +532,18 @@ export class ProjectsComponent implements OnInit {
     // const url = /gitlab-projects/details?data=${rowData};
     // window.open(url, '_blank');
   }
+
+  getSelectedKinds() {
+    return this.possibleKinds.filter(k => k.selected === true).map(k=> k.name);
+  }
+
+  getSelectedErrors () {
+    return this.possibleErrors.filter(e => e.selected === true).map(e=> e.code);
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
 }

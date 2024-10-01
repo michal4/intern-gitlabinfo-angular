@@ -33,3 +33,37 @@
     color: blue;
   }
 }
+
+.table-fixed {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.selected-filter-item {
+  font-weight: normal;
+  background: white;
+  padding: 4px 6px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+thead {
+  .btn-filter {
+    margin-right: 10px;
+  }
+}
+
+.sorting-controls {
+  display: flex;
+  flex-direction: column;
+
+  button, i {
+    padding: 0;
+    height: fit-content;
+    border: none;
+  }
+
+  i {
+    font-size: 22px;
+  }
+}

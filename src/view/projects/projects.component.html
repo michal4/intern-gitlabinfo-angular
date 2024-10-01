@@ -24,6 +24,8 @@
       <input type="text"
              class="form-control mb-3"
              placeholder="Type to search..."
+             [(ngModel)]="commonFilter"
+             (change)="applyFilters()"
              aria-describedby="basic-addon2">
       <div class="input-group-append">
       </div>
@@ -42,6 +44,7 @@
             id="dropdownMenuButton"
             (click)="toggleDropdown(DropdownType.COLUMNS)"
             aria-expanded="dropdownOpen">
+      <i class="bi bi-layout-three-columns"></i>
       Select columns
     </button>
     <ul class="dropdown-menu"
@@ -52,8 +55,8 @@
           <input class="form-check-input"
                  type="checkbox"
                  [id]="option.id"
-                 [(ngModel)]="option.selected"
-                 (change)="toggleAllOptions('columns')">
+                 [checked]="option.selected"
+                 (change)="toggleColumnSelection(option.id)">
           <label class="form-check-label" [for]="option.id">
             {{ option.label }}
           </label>
@@ -65,8 +68,8 @@
           <input class="form-check-input"
                  type="checkbox"
                  id="all"
-                 [(ngModel)]="allColumnsSelected"
-                 (change)="toggleAllOptions('columns')">
+                 [checked]="allColumnsSelected"
+                 (change)="toggleAllColumnsSelection()">
           <label class="form-check-label">
             All
           </label>
@@ -76,129 +79,142 @@
   </div>
 </div>
 
-<p>Found {{this.filteredData.length}} projects</p>
+<p>Found {{ this.filteredData.length }} projects</p>
 
 <!-- Dynamic table rendering based on selected columns -->
-<table class="table mt-4 table-bordered">
+<table class="table mt-4 table-bordered table-fixed">
   <thead>
   <tr class="table-primary">
     <th *ngFor="let column of getSelectedColumns()">
-      <div class="header-cell d-inline-flex">
+      <div class="flex">
+        <div class="d-inline-flex align-items-center">
+          <ng-container *ngIf="column.id === columnsId.KIND;">
+            <div class="dropdown">
+              <button class="btn btn-outline-primary btn-filter"
+                      type="button"
+                      id="filterDropdownButton"
+                      (click)="toggleDropdown(DropdownType.KIND)"
+                      aria-expanded="dropdownKindOpen">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <ul class="dropdown-menu"
+                  [ngClass]="{'show': dropdownState.kindOpen}"
+                  aria-labelledby="filterDropdownButton">
 
-        <ng-container *ngIf="column.id === columnsId.KIND;">
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle"
-                    type="button"
-                    id="filterDropdownButton"
-                    (click)="toggleDropdown(DropdownType.KIND)"
-                    aria-expanded="dropdownKindOpen">
-              Select Kind
+                <li *ngFor="let kind of possibleKinds">
+                  <div class="form-check m-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           [id]="kind.name"
+                           [checked]="kind.selected"
+                           (change)="toggleKindSelection(kind.name)">
+                    <label class="form-check-label" [for]="kind.name">
+                      {{ kind.name }}
+                    </label>
+                  </div>
+                </li>
+                <div class="dropdown-divider"></div>
+                <li>
+                  <div class="form-check m-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="allKinds"
+                           [checked]="allKindsSelected"
+                           (change)="toggleAllKindsSelection()">
+                    <label class="form-check-label">
+                      All
+                    </label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="column.id === columnsId.ERRORS;">
+            <div class="dropdown">
+              <button  class="btn btn-outline-primary btn-filter"
+                       type="button"
+                       id="filterErrorDropdownButton"
+                       (click)="toggleDropdown(DropdownType.ERRORS)"
+                      aria-expanded="dropdownKindOpen">
+                <i class="bi bi-funnel"></i>
+              </button>
+
+              <ul class="dropdown-menu"
+                  [ngClass]="{'show': dropdownState.errorsOpen}"
+                  aria-labelledby="filterErrorDropdownButton">
+
+                <li *ngFor="let error of possibleErrors">
+                  <div class="form-check m-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           [id]="error.code"
+                           [(ngModel)]="error.selected"
+                           (change)="applyFilters()">
+                    <label class="form-check-label" [for]="error.code">
+                      {{ error.code }}
+                    </label>
+                  </div>
+                </li>
+                <div class="dropdown-divider"></div>
+                <li>
+                  <div class="form-check m-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="allErrors"
+                           [checked]="allErrorsSelected"
+                           (change)="toggleAllErrorsSelection()">
+                    <label class="form-check-label">
+                      All
+                    </label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="column.id !== columnsId.ERRORS && column.id !== columnsId.KIND;">
+            <input type="text"
+                   [placeholder]="column.label"
+                   class="form-control form-control mt-1 filter-cell"
+                   [(ngModel)]="column.filter"
+                   (ngModelChange)="applyFilters()">
+          </ng-container>
+
+          <ng-container *ngIf="column.id === columnsId.KIND;">
+            <span class="selected-filter-item"
+                  *ngFor="let kind of getSelectedKinds()">{{ kind }}</span>
+          </ng-container>
+
+          <ng-container *ngIf="column.id === columnsId.ERRORS;">
+            <span class="selected-filter-item"
+                  *ngFor="let error of getSelectedErrors()">{{ error }}</span>
+          </ng-container>
+
+          <div class="sorting-controls d-inline-flex">
+            <button *ngIf="sortColumn === column.id && sortOrder === 'asc'"
+                    (click)="sortData(column.id, 'desc')"
+                    class="btn btn-outline-primary">
+              <i class="bi bi-arrow-up-short arrow"></i>
             </button>
-            <ul class="dropdown-menu"
-                [ngClass]="{'show': dropdownState.kindOpen}"
-                aria-labelledby="filterDropdownButton">
-
-              <li *ngFor="let kind of possibleKinds">
-                <div class="form-check m-2">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         [id]="kind.name"
-                  [(ngModel)]="kind.selected"
-                  (change)="applyFilters()">
-                  <label class="form-check-label" [for]="kind.name">
-                    {{ kind.name }}
-                  </label>
-                </div>
-              </li>
-              <div class="dropdown-divider"></div>
-              <li>
-                <div class="form-check m-2">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         id="allKinds"
-                         [(ngModel)]="allKindsSelected"
-                         (change)="toggleAllOptions(columnsId.KIND)">
-                  <label class="form-check-label">
-                    All
-                  </label>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </ng-container>
-
-        <ng-container *ngIf="column.id === columnsId.ERRORS;">
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle"
-                    type="button"
-                    id="filterErrorDropdownButton"
-                    (click)="toggleDropdown(DropdownType.ERRORS)"
-                    aria-expanded="dropdownErrorsOpen">
-              Select Errors
+            <i *ngIf="sortColumn === column.id && sortOrder === 'desc'"
+                    (click)="sortData(column.id, 'asc')"
+                    class="btn btn-outline-primary">
+              <i class="fa-solid bi-arrow-down-short arrow"></i>
+            </i>
+            <button *ngIf="sortColumn !== column.id"
+                    (click)="sortData(column.id, 'asc')"
+                    class="btn btn-outline-primary">
+              <i class="bi bi-arrow-up-short arrow"></i>
             </button>
-            <ul class="dropdown-menu"
-                [ngClass]="{'show': dropdownState.errorsOpen}"
-                aria-labelledby="filterErrorDropdownButton">
-
-              <li *ngFor="let error of possibleErrors">
-                <div class="form-check m-2">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         [id]="error.code"
-                  [(ngModel)]="error.selected"
-                  (change)="applyFilters()">
-                  <label class="form-check-label" [for]="error.code">
-                    {{ error.code }}
-                  </label>
-                </div>
-              </li>
-              <div class="dropdown-divider"></div>
-              <li>
-                <div class="form-check m-2">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         id="allErrors"
-                         [(ngModel)]="allErrorsSelected"
-                         (change)="toggleAllOptions(columnsId.ERRORS)">
-                  <label class="form-check-label">
-                    All
-                  </label>
-                </div>
-              </li>
-            </ul>
+            <button *ngIf="sortColumn !== column.id"
+                    (click)="sortData(column.id, 'desc')"
+                    class="btn btn-outline-primary">
+              <i class="bi bi-arrow-down-short"></i>
+            </button>
           </div>
-        </ng-container>
-
-        <ng-container *ngIf="column.id !== columnsId.ERRORS && column.id !== columnsId.KIND;">
-          <input type="text"
-                 [placeholder]="column.label"
-                 class="form-control form-control mt-1 filter-cell"
-                 [(ngModel)]="column.filter"
-                 (ngModelChange)="applyFilters()">
-        </ng-container>
-
-        <div class="sorting-controls d-inline-flex">
-          <button *ngIf="sortColumn === column.id && sortOrder === 'asc'"
-                  (click)="sortData(column.id, 'desc')"
-                  class="btn btn-link p-0">
-            <i class="bi bi-arrow-up"></i>
-          </button>
-          <button *ngIf="sortColumn === column.id && sortOrder === 'desc'"
-                  (click)="sortData(column.id, 'asc')"
-                  class="btn btn-link p-0">
-            <i class="bi bi-arrow-down"></i>
-          </button>
-          <button *ngIf="sortColumn !== column.id"
-                  (click)="sortData(column.id, 'asc')"
-                  class="btn btn-link p-0">
-            <i class="bi bi-arrow-up"></i>
-          </button>
-          <button *ngIf="sortColumn !== column.id"
-                  (click)="sortData(column.id, 'desc')"
-                  class="btn btn-link p-0">
-            <i class="bi bi-arrow-down"></i>
-          </button>
         </div>
+
       </div>
     </th>
 
@@ -243,11 +259,11 @@
              class="form-control input-group-sm mx-2"
              [(ngModel)]="customRowsPerPage"
              (change)="onCustomRowsChange($event)"
-             placeholder="Enter rows per page..." />
+             placeholder="Enter rows per page..."/>
     </div>
     <ng-template #allItems>
       <span>
-        {{ filteredData.length }} items
+        {{ paginatedData.length }} items
       </span>
     </ng-template>
   </div>
