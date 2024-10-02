@@ -1,0 +1,4 @@
+//the default font family for all levels.
+$kids-typography: mat.m2-define-typography-config($font-family: 'Roboto, "Helvetica Neue", sans-serif');
+
+@include mat.typography-hierarchy($kids-typography);

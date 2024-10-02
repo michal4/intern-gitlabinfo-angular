@@ -1,0 +1,120 @@
+@import "node_modules/@angular/material/core/theming/_theming";
+
+// A primary palette: barvy nejpoužívanější na všech obrazovkách a komponentách.
+// An accent palette: akční tlačítko a interaktivní prvky.
+// A warn palette: vyjádření chybového stavu.
+
+$app-primary: (
+        50: #E1F5FA,
+        100: #B4E6F3,
+        200: #85D6ED,
+        300: #5AC5E6,
+        400: #3BB9E3,
+        500: #005B8B,
+        // hlavní
+        600: #169FD2,
+        700: #088CBF,
+        800: #087AAC,
+        900: #005B8B,
+        A100: #ffffff,
+        A200: #dde6f3,
+        A400: #6992c9,
+        A700: #38649d,
+        contrast: (50: black,
+                100: black,
+                200: black,
+                300: black,
+                400: black,
+                500: white,
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: black,
+                A200: black,
+                A400: black,
+                A700: white,
+        )
+);
+
+$app-accent: (
+        50: #fbe9e7,
+        100: #ffccbc,
+        200: #ffab91,
+        300: #ff8a65,
+        400: #ff7043,
+        500: #ff5722,
+        // hlavní
+        600: #f4511e,
+        700: #e64a19,
+        800: #d84315,
+        900: #bf360c,
+        A100: #ffffff,
+        A200: #fff7f4,
+        A400: #fc8259,
+        A700: #f44205,
+        contrast: (50: black,
+                100: black,
+                200: black,
+                300: black,
+                400: black,
+                500: white,
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: black,
+                A200: black,
+                A400: black,
+                A700: white,
+        )
+);
+
+$app-warn: (
+        50: #fbe9e7,
+        100: #ffccbc,
+        200: #ffab91,
+        300: #ff8a65,
+        400: #ff7043,
+        500: #B00020,
+        // hlavní
+        600: #f4511e,
+        700: #e64a19,
+        800: #d84315,
+        900: #bf360c,
+        A100: #ffffff,
+        A200: #fff7f4,
+        A400: #fc8259,
+        A700: #f44205,
+        contrast: (50: black,
+                100: black,
+                200: black,
+                300: black,
+                400: black,
+                500: white,
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: black,
+                A200: black,
+                A400: black,
+                A700: white,
+        )
+);
+
+@include mat.core();
+
+$app-palette-primary: mat.m2-define-palette($app-primary);
+$app-palette-accent: mat.m2-define-palette($app-accent);
+$app-palette-warn: mat.m2-define-palette($app-warn);
+
+$app-theme: mat.m2-define-light-theme((color: (primary: $app-palette-primary,
+                                accent: $app-palette-accent,
+                                warn: $app-palette-warn,
+                        ),
+                        typography: mat.m2-define-typography-config(),
+                        density: 0,
+                ));
+
+@include mat.all-component-themes($app-theme);

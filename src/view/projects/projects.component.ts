@@ -1,11 +1,23 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {NgClass, NgForOf, NgIf} from "@angular/common";
-import {FormsModule, ReactiveFormsModule} from "@angular/forms";
+import {FormControl, FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {GitLabProject} from 'intern-gitlabinfo-openapi-angular';
 import {ProjectService} from '../../service/project.service';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from '../../service/cookie.service';
 import {Subject, takeUntil} from 'rxjs';
+import {MatTableModule} from '@angular/material/table';
+import {MatPaginatorModule} from '@angular/material/paginator';
+import {MatSort, MatSortModule, Sort} from '@angular/material/sort';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatSelectModule} from '@angular/material/select';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
+import {MatButtonModule} from '@angular/material/button';
+import {MatMenuModule} from '@angular/material/menu';
+import {MatIconModule} from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatDividerModule} from '@angular/material/divider'; // <-- Add MatDividerModule
 
 interface PossibleFilter {
   name: string;
@@ -36,7 +48,19 @@ export enum DropdownType {
     ReactiveFormsModule,
     NgClass,
     FormsModule,
-    HttpClientModule
+    HttpClientModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
+    MatCheckboxModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatDividerModule
   ],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
@@ -53,7 +77,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   private allColumnsSelectedSubject = new Subject<boolean>();
   private allKindsSelectedSubject = new Subject<boolean>();
   private allErrorsSelectedSubject = new Subject<boolean>();
-
 
   // Column identifiers
   readonly columnsId = {
@@ -95,23 +118,33 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   itemsPerPageOptions: any = [5, 10, 15, 20, 50, 100, 'all', 'custom'];
 
   // Sorting
-  sortColumn: string | null | undefined;
-  sortOrder: 'asc' | 'desc' | undefined;
+  sortColumn: string = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
   commonFilter: string | undefined;
   useRegex: boolean | undefined;
 
+  selectedColumnIds: any;
+
+  columnsForm = new FormControl();
+  errorForm = new FormControl();
+  kindForm = new FormControl();
+
+
   columns = [
-    {id: this.columnsId.NAME, label: 'Name', selected: true, filter: ''},
-    {id: this.columnsId.DEFAULT_BRANCH, label: 'Default Branch', selected: true, filter: ''},
-    {id: this.columnsId.PARENT_ARTIFACT_ID, label: 'Parent ArtifactId', selected: true, filter: ''},
-    {id: this.columnsId.PARENT_VERSION, label: 'Parent Version', selected: true, filter: ''},
-    {id: this.columnsId.ERRORS, label: 'Errors', selected: true, filter: ''},
-    {id: this.columnsId.KIND, label: 'Kind', selected: true, filter: ''},
-    {id: this.columnsId.DESCRIPTION, label: 'Description', selected: true, filter: ''},
+    {id: this.columnsId.NAME, label: 'Name', selected: true},
+    {id: this.columnsId.DEFAULT_BRANCH, label: 'Default Branch', selected: true},
+    {id: this.columnsId.PARENT_ARTIFACT_ID, label: 'Parent ArtifactId', selected: true},
+    {id: this.columnsId.PARENT_VERSION, label: 'Parent Version', selected: true},
+    {id: this.columnsId.ERRORS, label: 'Errors', selected: true},
+    {id: this.columnsId.KIND, label: 'Kind', selected: true},
+    {id: this.columnsId.DESCRIPTION, label: 'Description', selected: true},
   ];
   private columnSubjects: { [key: string]: Subject<void> } = {};
   private kindSubjects: { [key: string]: Subject<void> } = {};
+  private errorSubjects: { [key: string]: Subject<void> } = {};
+
+  @ViewChild(MatSort) sort: MatSort | undefined;
 
   constructor(private projectService: ProjectService,
               private cookieService: CookieService
@@ -145,6 +178,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       }
       this.columnSubjects[column.id].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     });
+    const selectedColumns = this.columns.filter(c => c.selected);
+    this.columnsForm.setValue(selectedColumns)
 
     this.possibleKinds.forEach(kind => {
       if (!this.kindSubjects[kind.name]) {
@@ -152,6 +187,17 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       }
       this.kindSubjects[kind.name].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     });
+    const selectedKinds = this.possibleKinds.filter(k => k.selected) || [];
+    this.kindForm.setValue(selectedKinds)
+
+    this.possibleErrors.forEach(error => {
+      if (!this.errorSubjects[error.code]) {
+        this.errorSubjects[error.code] = new Subject<void>();
+      }
+      this.errorSubjects[error.code].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    });
+    const selectedErrors = this.possibleErrors.filter(e => e.selected) || [];
+    this.errorForm.setValue(selectedErrors)
   }
 
   loadProjects() {
@@ -190,10 +236,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       ? this.selectedItemsPerPageOption
       : (this.selectedItemsPerPageOption as number || DEFAULT_ITEMS_PER_PAGE); // Assign number or fallback
 
-    // Sorting
-    this.sortColumn = this.cookieService.getCookie("sortBy") || null;
-    this.sortOrder = (this.cookieService.getCookie("sortDest") as 'asc' | 'desc') || DEFAULT_SORT_ORDER;
-
     // columns
     const selectedColumns = this.cookieService.getCookie("selectedColumns");
     if (selectedColumns) {
@@ -202,6 +244,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       this.columns.forEach(column => {
         column.selected = selectedColumnIds.includes(column.id);
       });
+
+      this.selectedColumnIds = this.columns.filter(c => c.selected).map(c => c.id);
     }
     //
     // // kinds
@@ -211,11 +255,17 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     //   this.possibleKinds.forEach(kind => kind.selected = selectedKindNames.includes(kind.name));
     // }
 
-    this.columns.forEach(column => {
-      column.filter = this.cookieService.getCookie(column.id) || '';
-    });
-
+    // Sorting
+    this.sortColumn = this.cookieService.getCookie('sortBy') || '';
+    this.sortDirection = (this.cookieService.getCookie('sortDest') as 'asc' | 'desc') || DEFAULT_SORT_ORDER;
+    const sortState: Sort = {active: this.sortColumn, direction: this.sortDirection};
+    if (this.sort) {
+      this.sort.active = sortState.active;
+      this.sort.direction = sortState.direction;
+      this.sort.sortChange.emit(sortState);
+    }
   }
+
 
   updateCookie() {
     if (this.currentPage !== undefined && this.currentPage !== null) {
@@ -224,8 +274,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (this.itemsPerPage !== undefined && this.itemsPerPage !== null) {
       this.cookieService.setCookie("size", this.itemsPerPage.toString());
     }
-    if (this.sortOrder !== undefined && this.sortOrder !== null) {
-      this.cookieService.setCookie("sortDest", this.sortOrder.toString());
+    if (this.sortDirection !== undefined && this.sortDirection !== null) {
+      this.cookieService.setCookie("sortDest", this.sortDirection.toString());
     }
     this.cookieService.setCookie("sortBy", this.sortColumn || '');
 
@@ -234,7 +284,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       .filter(col => col.selected)
       .map(col => col.id).join(",");
     if (selectedColumnIds.length === 0) {
-      selectedColumnIds = '-';
+      selectedColumnIds = '';
     }
     this.cookieService.setCookie("selectedColumns", selectedColumnIds);
 
@@ -242,13 +292,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const selectedKinds = this.possibleKinds
       .filter(kind => kind.selected)
       .map(kind => kind.name).join(",");
-    this.cookieService.setCookie(this.columnsId.KIND, selectedKinds.length ? selectedKinds : '-');
+    this.cookieService.setCookie(this.columnsId.KIND, selectedKinds.length ? selectedKinds : '');
 
     // selected errors
     const selectedErrors = this.possibleErrors
       .filter(error => error.selected)
       .map(error => error.code).join(",");
-    this.cookieService.setCookie(this.columnsId.ERRORS, selectedErrors.length ? selectedErrors : '-');
+    this.cookieService.setCookie(this.columnsId.ERRORS, selectedErrors.length ? selectedErrors : '');
 
     // common filter
     if (this.commonFilter !== undefined && this.commonFilter !== null) {
@@ -328,25 +378,34 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.allErrorsSelectedSubject.next(this.allErrorsSelected);
   }
 
-  toggleAllColumnsSelection() {
+  toggleAllColumnsSelection(): void {
     this.allColumnsSelected = !this.allColumnsSelected;
     this.columns.forEach(col => col.selected = this.allColumnsSelected);
+    this.columnsForm.setValue(this.getSelectedColumns())
     this.allColumnsSelectedSubject.next(this.allColumnsSelected);
+    this.selectedColumnIds = this.getSelectedColumns().map(c => c.id);
   }
 
   toggleAllKindsSelection() {
     this.allKindsSelected = !this.allKindsSelected;
     this.possibleKinds.forEach(kind => kind.selected = this.allKindsSelected);
+    const kinds = this.possibleKinds.filter(k => k.selected);
+    this.kindForm.setValue(kinds)
     this.allKindsSelectedSubject.next(this.allKindsSelected);
+
+
+    console.log(this.possibleKinds)
   }
 
   toggleAllErrorsSelection() {
     this.allErrorsSelected = !this.allErrorsSelected;
     this.possibleErrors.forEach(error => error.selected = this.allErrorsSelected);
+    const errors = this.possibleErrors.filter(e => e.selected);
+    this.errorForm.setValue(errors)
     this.allErrorsSelectedSubject.next(this.allErrorsSelected);
   }
 
-  toggleColumnSelection(columnId: string) {
+  toggleColumnSelection(columnId: string): void {
     const column = this.columns.find(col => col.id === columnId);
     if (column) {
       column.selected = !column.selected;
@@ -354,6 +413,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       this.allColumnsSelected = this.columns.every(col => col.selected);
       this.allColumnsSelectedSubject.next(this.allColumnsSelected);
     }
+    this.selectedColumnIds = this.getSelectedColumns().map(c => c.id);
   }
 
   toggleKindSelection(kindName: string) {
@@ -367,10 +427,22 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
       this.allKindsSelected = this.possibleKinds.every(k => k.selected);
       this.allKindsSelectedSubject.next(this.allKindsSelected);
-      this.updateCookie();
     }
   }
 
+  toggleErrorSelection(errorCode: string) {
+    const error = this.possibleErrors.find(e => e.code === errorCode);
+    if (error) {
+      error.selected = !error.selected;
+      if (!this.errorSubjects[errorCode]) {
+        this.errorSubjects[errorCode] = new Subject<void>();
+      }
+      this.errorSubjects[errorCode].next();
+
+      this.allErrorsSelected = this.possibleErrors.every(e => e.selected);
+      this.allErrorsSelectedSubject.next(this.allErrorsSelected);
+    }
+  }
 
   onItemsPerPageChange() {
     if (this.selectedItemsPerPageOption === 'custom') {
@@ -400,10 +472,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (columnId !== null && dist !== null) {
       if (columnId) {
         this.sortColumn = columnId;
-        this.sortOrder = dist === 'asc' ? 'asc' : 'desc';
+        this.sortDirection = dist === 'asc' ? 'asc' : 'desc';
 
         this.sortColumnSubject.next(this.sortColumn);
-        this.sortOrderSubject.next(this.sortOrder);
+        this.sortOrderSubject.next(this.sortDirection);
 
         this.filteredData.sort((a, b) => {
           const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
@@ -466,20 +538,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   applyFilters() {
-    const nameFilter = this.columns.find(col => col.id === this.columnsId.NAME)?.filter || '';
-    const defaultBranchFilter = this.columns.find(col => col.id === this.columnsId.DEFAULT_BRANCH)?.filter || '';
-    const parentArtifactIdFilter = this.columns.find(col => col.id === this.columnsId.PARENT_ARTIFACT_ID)?.filter || '';
-    const parentVersionFilter = this.columns.find(col => col.id === this.columnsId.PARENT_VERSION)?.filter || '';
-    const descriptionFilter = this.columns.find(col => col.id === this.columnsId.DESCRIPTION)?.filter || '';
-
-    this.cookieService.setCookie(this.columnsId.NAME, nameFilter.toLowerCase())
-    this.cookieService.setCookie(this.columnsId.DEFAULT_BRANCH, defaultBranchFilter.toLowerCase())
-    this.cookieService.setCookie(this.columnsId.PARENT_ARTIFACT_ID, parentArtifactIdFilter.toLowerCase())
-    this.cookieService.setCookie(this.columnsId.PARENT_VERSION, parentVersionFilter.toLowerCase())
-    this.cookieService.setCookie(this.columnsId.DESCRIPTION, descriptionFilter.toLowerCase())
-
-    // console.log('kinds=' + this.possibleKinds)
-    // console.log('allKindsSelected=' + this.allKindsSelected)
+    const nameFilter = this.cookieService.getCookie(this.columnsId.NAME) || '';
+    const defaultBranchFilter = this.cookieService.getCookie(this.columnsId.DEFAULT_BRANCH) || '';
+    const parentArtifactIdFilter = this.cookieService.getCookie(this.columnsId.PARENT_ARTIFACT_ID) || '';
+    const parentVersionFilter = this.cookieService.getCookie(this.columnsId.PARENT_VERSION) || '';
+    const descriptionFilter = this.cookieService.getCookie(this.columnsId.DESCRIPTION) || '';
 
     this.filteredData = this.projects.filter(project => {
       const matchesName = project.name?.toLowerCase().includes(nameFilter.toLowerCase());
@@ -518,11 +581,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     return this.columns.filter(option => option.selected);
   }
 
-  onCustomRowsChange(event: any) {
+  onCustomRowsChange(event: any): void {
     const customValue = parseInt(event.target.value, 10);
     if (customValue >= 0) {
       this.customRowsPerPage = customValue;
-      this.itemsPerPage = customValue; // Update itemsPerPage with the custom value
+      this.itemsPerPage = customValue;
       this.updatePaginatedData();
     }
   }
@@ -534,16 +597,78 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getSelectedKinds() {
-    return this.possibleKinds.filter(k => k.selected === true).map(k=> k.name);
+    return this.cookieService.getCookie(this.columnsId.KIND);
   }
 
-  getSelectedErrors () {
-    return this.possibleErrors.filter(e => e.selected === true).map(e=> e.code);
+  getSelectedErrors() {
+    return this.cookieService.getCookie(this.columnsId.ERRORS);
+  }
+
+  getPageSize() {
+    if (this.selectedItemsPerPageOption === 'all') {
+      return this.filteredData.length;
+    } else if (this.selectedItemsPerPageOption === 'custom') {
+      return this.customRowsPerPage;
+    } else {
+      return this.selectedItemsPerPageOption ? +this.selectedItemsPerPageOption : DEFAULT_ITEMS_PER_PAGE;
+    }
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  getTotalItems(): number {
+    return this.filteredData.length;
+  }
+
+  getPaginationEndIndex(): number {
+    if (this.currentPage === undefined) {
+      return 0;
+    }
+    const end = this.itemsPerPage > this.getTotalItems() ? this.getTotalItems() : this.itemsPerPage * this.currentPage;
+    if (end > this.getTotalItems()) {
+      return this.getTotalItems();
+    }
+    return end;
+  }
+
+  getPaginationStartIndex(): number {
+    if (this.currentPage === undefined) {
+      return 0;
+    }
+    if (this.currentPage === 1) {
+      return 1;
+    }
+    const index = (this.currentPage - 1) * this.itemsPerPage + 1;
+    if (index < 0) {
+      return 0;
+    }
+    return index;
+  }
+
+  getValueFromCookie(columnId: string) {
+    return this.cookieService.getCookie(columnId);
+  }
+
+  filterValue(id: string, $event: Event) {
+    let element = $event.target as HTMLInputElement;
+    this.cookieService.setCookie(id, element.value);
+    this.applyFilters();
+  }
+
+  saveToCookie(key: any, value: string) {
+    this.cookieService.setCookie(key, value)
+
+    this.applyFilters()
+  }
+
+  highlightText(text: any, columnId: string): string {
+    const searchValue = this.cookieService.getCookie(columnId);
+    if (!searchValue) return text;
+    const regex = new RegExp(`(${searchValue})`, 'gi');
+    return text.replace(regex, `<mark style="background-color: yellow;">$1</mark>`);
   }
 
 }

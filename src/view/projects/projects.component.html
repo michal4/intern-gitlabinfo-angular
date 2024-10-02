@@ -15,6 +15,7 @@
 </head>
 
 <body class="page">
+
 <h1>GitLab Projects</h1>
 
 <div class="d-flex flex-row justify-content-between">
@@ -38,255 +39,169 @@
     </div>
   </div>
 
-  <div class="d-inline-flex align-items-center">
-    <div class="d-inline-flex align-items-center m-2">
-      {{ this.filteredData.length }} projects
-    </div>
-
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle"
-              type="button"
-              id="dropdownMenuButton"
-              (click)="toggleDropdown(DropdownType.COLUMNS)"
-              aria-expanded="dropdownOpen">
-        <i class="bi bi-layout-three-columns"></i>
-        Select columns
-      </button>
-      <ul class="dropdown-menu"
-          [ngClass]="{'show': dropdownState.columnsOpen}"
-          aria-labelledby="dropdownMenuButton">
-        <li *ngFor="let option of columns">
-          <div class="form-check m-2">
-            <input class="form-check-input"
-                   type="checkbox"
-                   [id]="option.id"
-                   [checked]="option.selected"
-                   (change)="toggleColumnSelection(option.id)">
-            <label class="form-check-label" [for]="option.id">
-              {{ option.label }}
-            </label>
-          </div>
-        </li>
-        <div class="dropdown-divider"></div>
-        <li>
-          <div class="form-check m-2">
-            <input class="form-check-input"
-                   type="checkbox"
-                   id="all"
-                   [checked]="allColumnsSelected"
-                   (change)="toggleAllColumnsSelection()">
-            <label class="form-check-label">
-              All
-            </label>
-          </div>
-        </li>
-      </ul>
-    </div>
-
-  </div>
-</div>
-<!-- Pagination -->
-<div class="d-flex align-items-center">
-  <div class="d-flex align-items-center mx-3">
-    <label class="mb-0 me-2">Rows per page:</label>
-    <!-- Dropdown for selecting items per page -->
-    <select class="form-control pagination-select"
-            [(ngModel)]="selectedItemsPerPageOption"
-            (change)="onItemsPerPageChange()">
-      <option *ngFor="let option of itemsPerPageOptions"
-              [ngValue]="option">
-        {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
-      </option>
-    </select>
-
-
-    <!-- Input field for custom items per page, only shown when 'custom' is selected -->
-    <div *ngIf="selectedItemsPerPageOption === 'custom'">
-      <input type="number"
-             min="0"
-             class="form-control input-group-sm mx-2"
-             [(ngModel)]="customRowsPerPage"
-             (change)="onCustomRowsChange($event)"
-             placeholder="Enter rows per page..."/>
-    </div>
-    <ng-template #allItems>
-      <span>
-        {{ paginatedData.length }} items
-      </span>
-    </ng-template>
-  </div>
-
-  <div>
-    <button class="btn btn-light"
-            [disabled]="currentPage === 1"
-            (click)="changePage(-1)">
-      <i class="bi bi-chevron-left"></i>
-    </button>
-    <span class="mx-2">
-      Page {{ currentPage }} of {{ totalPages }}
-    </span>
-    <button class="btn btn-light"
-            [disabled]="currentPage === totalPages"
-            (click)="changePage(+1)">
-      <i class="bi bi-chevron-right"></i>
-    </button>
-  </div>
 </div>
 
-<!-- Dynamic table rendering based on selected columns -->
-<table class="table mt-4 table-bordered table-fixed">
-  <thead>
-  <tr class="table-primary">
-    <th *ngFor="let column of getSelectedColumns()">
-      <div class="flex">
-        <div class="d-inline-flex align-items-center">
-          <ng-container *ngIf="column.id === columnsId.KIND;">
-            <div class="dropdown">
-              <button class="btn btn-outline-primary btn-filter"
-                      type="button"
-                      id="filterDropdownButton"
-                      (click)="toggleDropdown(DropdownType.KIND)"
-                      aria-expanded="dropdownKindOpen">
-                <i class="bi bi-funnel"></i>
-              </button>
-              <ul class="dropdown-menu"
-                  [ngClass]="{'show': dropdownState.kindOpen}"
-                  aria-labelledby="filterDropdownButton">
-
-                <li *ngFor="let kind of possibleKinds">
-                  <div class="form-check m-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           [id]="kind.name"
-                           [checked]="kind.selected"
-                           (change)="toggleKindSelection(kind.name)">
-                    <label class="form-check-label" [for]="kind.name">
-                      {{ kind.name }}
-                    </label>
-                  </div>
-                </li>
-                <div class="dropdown-divider"></div>
-                <li>
-                  <div class="form-check m-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           id="allKinds"
-                           [checked]="allKindsSelected"
-                           (change)="toggleAllKindsSelection()">
-                    <label class="form-check-label">
-                      All
-                    </label>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </ng-container>
-
-          <ng-container *ngIf="column.id === columnsId.ERRORS;">
-            <div class="dropdown">
-              <button  class="btn btn-outline-primary btn-filter"
-                       type="button"
-                       id="filterErrorDropdownButton"
-                       (click)="toggleDropdown(DropdownType.ERRORS)"
-                      aria-expanded="dropdownKindOpen">
-                <i class="bi bi-funnel"></i>
-              </button>
-
-              <ul class="dropdown-menu"
-                  [ngClass]="{'show': dropdownState.errorsOpen}"
-                  aria-labelledby="filterErrorDropdownButton">
-
-                <li *ngFor="let error of possibleErrors">
-                  <div class="form-check m-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           [id]="error.code"
-                           [(ngModel)]="error.selected"
-                           (change)="applyFilters()">
-                    <label class="form-check-label" [for]="error.code">
-                      {{ error.code }}
-                    </label>
-                  </div>
-                </li>
-                <div class="dropdown-divider"></div>
-                <li>
-                  <div class="form-check m-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           id="allErrors"
-                           [checked]="allErrorsSelected"
-                           (change)="toggleAllErrorsSelection()">
-                    <label class="form-check-label">
-                      All
-                    </label>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </ng-container>
-
-          <ng-container *ngIf="column.id !== columnsId.ERRORS && column.id !== columnsId.KIND;">
-            <input type="text"
-                   [placeholder]="column.label"
-                   class="form-control form-control mt-1 filter-cell"
-                   [(ngModel)]="column.filter"
-                   (ngModelChange)="applyFilters()">
-          </ng-container>
-
-          <ng-container *ngIf="column.id === columnsId.KIND;">
-            <span class="selected-filter-item"
-                  *ngFor="let kind of getSelectedKinds()">{{ kind }}</span>
-          </ng-container>
-
-          <ng-container *ngIf="column.id === columnsId.ERRORS;">
-            <span class="selected-filter-item"
-                  *ngFor="let error of getSelectedErrors()">{{ error }}</span>
-          </ng-container>
-
-          <div class="sorting-controls d-inline-flex">
-            <button *ngIf="sortColumn === column.id && sortOrder === 'asc'"
-                    (click)="sortData(column.id, 'desc')"
-                    class="btn btn-outline-primary">
-              <i class="bi bi-arrow-up-short arrow"></i>
-            </button>
-            <i *ngIf="sortColumn === column.id && sortOrder === 'desc'"
-                    (click)="sortData(column.id, 'asc')"
-                    class="btn btn-outline-primary">
-              <i class="fa-solid bi-arrow-down-short arrow"></i>
-            </i>
-            <button *ngIf="sortColumn !== column.id"
-                    (click)="sortData(column.id, 'asc')"
-                    class="btn btn-outline-primary">
-              <i class="bi bi-arrow-up-short arrow"></i>
-            </button>
-            <button *ngIf="sortColumn !== column.id"
-                    (click)="sortData(column.id, 'desc')"
-                    class="btn btn-outline-primary">
-              <i class="bi bi-arrow-down-short"></i>
-            </button>
-          </div>
-        </div>
-
+<div class="pagination-container">
+  <!-- pagination -->
+  <div class="pagination">
+    <div class="filed-container">
+      <mat-form-field>
+        <mat-label>Items per page</mat-label>
+        <mat-select [(value)]="selectedItemsPerPageOption"
+                    (selectionChange)="onItemsPerPageChange()">
+          <mat-option *ngFor="let option of itemsPerPageOptions" [value]="option">
+            {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      <!-- Input field for custom items per page, only shown when 'Custom' is selected -->
+      <div *ngIf="selectedItemsPerPageOption === 'custom'">
+        <mat-form-field appearance="fill">
+          <mat-label>Enter items per page</mat-label>
+          <input matInput type="number"
+                 min="0"
+                 [(ngModel)]="customRowsPerPage"
+                 (change)="onCustomRowsChange($event)">
+        </mat-form-field>
       </div>
+      <ng-template #allItems>
+  <span>
+    {{ paginatedData.length }} items
+  </span>
+      </ng-template>
+    </div>
+    <!--  items per page -->
+    <div>
+      <button class="btn btn-light"
+              [disabled]="currentPage === 1"
+              (click)="changePage(-1)">
+        <mat-icon aria-hidden="false"
+                  aria-label="Pagination left btn"
+                  fontIcon="keyboard_arrow_left">
+        </mat-icon>
+      </button>
+      <span class="mx-2">
+      {{ getPaginationStartIndex() }} - {{ getPaginationEndIndex() }} of {{ getTotalItems() }}
+    </span>
+      <button class="btn btn-light"
+              [disabled]="currentPage === totalPages"
+              (click)="changePage(+1)">
+        <mat-icon aria-hidden="false"
+                  aria-label="Pagination right btn"
+                  fontIcon="keyboard_arrow_right">
+        </mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!--  select columns-->
+  <mat-form-field>
+    <mat-label>Columns</mat-label>
+    <mat-select [formControl]="columnsForm" multiple>
+
+      <mat-select-trigger>
+        {{ columnsForm.value?.length ? columnsForm.value.length : '' }}/ {{ columns.length }}
+      </mat-select-trigger>
+
+      <mat-option *ngFor="let column of columns"
+                  [value]="column"
+                  (click)="toggleColumnSelection(column.id)">
+        {{ column.label }}
+      </mat-option>
+      <mat-option value="select-all"
+                  (click)="toggleAllColumnsSelection()">
+        All
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+<table mat-table [dataSource]="paginatedData">
+  <ng-container *ngFor="let column of getSelectedColumns()"
+                [matColumnDef]="column.id">
+    <th mat-header-cell *matHeaderCellDef>
+      <div class="table-header-cell">
+        <!--  select errors  -->
+        <ng-container *ngIf="column.id === 'errors'">
+          <mat-form-field>
+            <mat-label>Errors</mat-label>
+            <mat-select [formControl]="errorForm" multiple>
+
+              <mat-select-trigger>
+                {{ getSelectedErrors() }}
+              </mat-select-trigger>
+
+              <mat-option *ngFor="let error of possibleErrors"
+                          [value]="error.code"
+                          (click)="toggleErrorSelection(error.code)">
+                {{ error.code }}
+              </mat-option>
+              <mat-option value="select-all"
+                          (click)="toggleAllKindsSelection()">
+                All
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+
+        <!--  select kinds  -->
+        <ng-container *ngIf="column.id === 'kind'">
+          <mat-form-field>
+            <mat-label>Kinds</mat-label>
+            <mat-select [formControl]="kindForm" multiple>
+
+              <mat-select-trigger>
+                {{ getSelectedKinds() }}
+              </mat-select-trigger>
+
+              <mat-option *ngFor="let kind of possibleKinds"
+                          [value]="kind.name"
+                          (click)="toggleKindSelection(kind.name)">
+                {{ kind.name }}
+              </mat-option>
+              <mat-option value="select-all"
+                          (click)="toggleAllKindsSelection()">
+                All
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+
+        <ng-container *ngIf="column.id !== 'errors' && column.id !== 'kind'">
+          <mat-form-field>
+            <mat-label>{{ column.label }}</mat-label>
+            <input #inputField matInput [placeholder]="column.label"
+                   [value]="getValueFromCookie(column.id)"
+                   (keyup)="saveToCookie(column.id, inputField.value)">
+          </mat-form-field>
+        </ng-container>
+
+        <!--sort-->
+        <div class="header-sort">
+          <mat-icon aria-hidden="false"
+                    aria-label="sort up btn"
+                    fontIcon="keyboard_arrow_up"
+                    (click)="sortData(column.id, 'asc')"
+                    [style.color]="(sortColumn === column.id && sortDirection === 'asc') ? '#005b8b' : '#d3d1d1'">
+          </mat-icon>
+          <mat-icon aria-hidden="false"
+                    aria-label="sort down btn"
+                    fontIcon="keyboard_arrow_down"
+                    (click)="sortData(column.id, 'desc')"
+                    [style.color]="(sortColumn === column.id && sortDirection === 'desc') ? '#005b8b' : '#d3d1d1'">
+          </mat-icon>
+        </div>
+      </div>
+
     </th>
 
-    <th>Actions</th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr *ngFor="let row of paginatedData"
-      [ngClass]="{'archived-row': row.archived}">
-    <td *ngFor="let column of getSelectedColumns()">
-      {{ getRowValue(row, column.id) }}
+    <td mat-cell *matCellDef="let row">
+      <span [innerHTML]="highlightText(getRowValue(row, column.id), column.id)"></span>
     </td>
-    <td>
-      <button class="btn btn-outline-secondary btn-sm"
-              (click)="viewDetails(row)">
-        View Details
-      </button>
-    </td>
-  </tr>
-  </tbody>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="selectedColumnIds"></tr>
+  <tr mat-row *matRowDef="let row; columns: selectedColumnIds;"></tr>
 </table>
 
 </body>

@@ -1,0 +1,274 @@
+//.mat-row.highlighted {
+//  background: mat.m2-get-color-from-palette($app-primary, 50);
+//}
+//
+//.filter .mat-select-value {
+//  color: mat.m2-get-color-from-palette($app-primary, 500) !important;
+//}
+//
+//.filterDate .mat-date-range-input-inner {
+//  color: mat.m2-get-color-from-palette($app-primary, 500) !important;
+//}
+//
+//.mat-header-cell {
+//  font-size: 15px;
+//  font-weight: 500;
+//  color: black;
+//}
+//
+//tr.mat-header-row {
+//  height: 3rem !important;
+//}
+//
+//.mat-button {
+//  min-width: auto !important;
+//}
+//
+//.mat-select-value {
+//  font-weight: 500 !important;
+//}
+//
+//.flat-button {
+//  border-radius: 0.2rem;
+//  border: 0;
+//  padding-top: 0;
+//  padding-left: 0.2rem;
+//  margin-top: 0.1rem;
+//  margin-left: 0.4rem;
+//  background: white;
+//  box-sizing: border-box;
+//  position: relative;
+//  -webkit-user-select: none;
+//  user-select: none;
+//  cursor: pointer;
+//  outline: none;
+//  -webkit-tap-highlight-color: transparent;
+//  display: inline-block;
+//  white-space: nowrap;
+//  text-decoration: none;
+//  vertical-align: baseline;
+//  text-align: center;
+//  min-width: 30px;
+//  max-height: 30px;
+//  overflow: visible;
+//  box-shadow: 0 3px 1px -2px #0003, 0 2px 2px #00000024, 0 1px 5px #0000001f;
+//}
+//
+//.mat-drawer-container {
+//  background-color: transparent;
+//  color: rgba(0, 0, 0, .69) !important;
+//}
+//
+//.mat-mdc-form-field-focus-overlay {
+//  background-color: transparent !important;
+//}
+//
+//.mdc-text-field--filled:not(.mdc-text-field--disabled) {
+//  background-color: transparent !important;
+//}
+//
+//.mat-mdc-form-field-infix {
+//  padding-top: 1.6rem !important;
+//  padding-bottom: 0 !important;
+//}
+//
+//.mdc-text-field {
+//  padding: 0 !important;
+//}
+//
+//.mat-toolbar .mat-mdc-button-base.mat-mdc-button-base.mat-unthemed {
+//  color: white !important;
+//}
+//
+//.mdc-white-line {
+//
+//  .mdc-line-ripple::before,
+//  .mdc-line-ripple::after {
+//    border-bottom-color: white !important;
+//  }
+//}
+//
+//.mat-mdc-icon-button .mat-mdc-button-touch-target {
+//  height: 10px !important;
+//  width: 10px !important;
+//}
+//
+//.mat-mdc-icon-button.mat-mdc-button-base {
+//  --mdc-icon-button-state-layer-size: 34px !important;
+//  padding: 4px !important;
+//}
+//
+//.mat-mdc-menu-panel {
+//  min-width: max-content !important;
+//}
+//
+//.mdc-snackbar__label {
+//  padding-left: 16px !important;
+//  padding-right: 16px !important;
+//}
+//
+//.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+//  background-color: var(--mdc-snackbar-container-color);
+//  padding: 0;
+//}
+//
+//.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+//  max-width: max-content !important;
+//}
+//
+//.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+//  min-width: 0 !important;
+//}
+//
+//.mat-mdc-snack-bar-container {
+//  &.done {
+//    --mdc-snackbar-container-color: rgb(2, 92, 140) !important;
+//    --mat-mdc-snack-bar-button-color: #fff;
+//    --mdc-snackbar-supporting-text-color: #fff;
+//    text-align: -webkit-center;
+//  }
+//}
+//
+//.mat-mdc-snack-bar-container {
+//  &.info {
+//    --mdc-snackbar-container-color: rgba(0, 0, 0, 0.8) !important;
+//    --mat-mdc-snack-bar-button-color: #fff;
+//    --mdc-snackbar-supporting-text-color: #fff;
+//  }
+//}
+//
+//.mat-mdc-snack-bar-container {
+//  &.error {
+//    --mdc-snackbar-container-color: rgba(232, 5, 5, 0.9) !important;
+//    --mat-mdc-snack-bar-button-color: #fff;
+//    --mdc-snackbar-supporting-text-color: #fff;
+//  }
+//}
+//
+//.mat-mdc-snack-bar-container {
+//  &.warn {
+//    --mdc-snackbar-container-color: rgba(232, 221, 5, 0.9) !important;
+//    --mat-mdc-snack-bar-button-color: #fff;
+//    --mdc-snackbar-supporting-text-color: #fff;
+//  }
+//}
+//
+//.mat-mdc-menu-item {
+//  min-height: 31px !important;
+//}
+//
+//.mat-mdc-menu-item .mat-icon-no-color,
+//.mat-mdc-menu-item .mat-mdc-menu-submenu-icon {
+//  color: rgba(0, 0, 0, .69) !important;
+//}
+//
+//.mat-mdc-tooltip .mdc-tooltip__surface {
+//  font-size: 1rem !important;
+//  background-color: white !important;
+//  color: black !important;
+//  box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.2), 0px 1px 10px 0px rgba(0, 0, 0, 0.2);
+//}
+//
+//.mdc-data-table__cell,
+//.mdc-data-table__header-cell {
+//  padding: 0 !important;
+//}
+//
+//.mat-mdc-tab-header {
+//  border-bottom: 1px solid rgba(0, 0, 0, .12);
+//}
+//
+//.mat-mdc-menu-item:not([disabled]):hover {
+//  background-color: var(--mat-menu-item-hover-state-layer-color) !important;
+//}
+//
+//.mat-mdc-menu-item,
+//.mat-mdc-menu-item:visited,
+//.mat-mdc-menu-item:link {
+//  background: white !important;
+//}
+//
+//.mat-mdc-menu-content {
+//  padding: 0 0 0 0 !important;
+//}
+//
+//.mdc-checkbox {
+//  padding: 0.5rem !important;
+//  --mdc-checkbox-state-layer-size: 32px !important;
+//}
+//
+//td.mat-cell {
+//  padding: 0;
+//  border-bottom-width: 1px;
+//  border-bottom-style: solid;
+//  border-bottom-color: #0000001f;
+//  height: 2rem;
+//}
+//
+//.mat-mdc-tooltip .mdc-tooltip__surface {
+//  font-size: 14px !important;
+//}
+//
+//.cdk-keyboard-focused {
+//  outline: mat.m2-get-color-from-palette($app-primary, 500) 1px solid !important;
+//  border-radius: 2rem !important;
+//  margin: 1px !important;
+//}
+//
+//.filter {
+//  background: #0157850f;
+//  height: 1.5rem;
+//  font-size: 1rem;
+//  width: 90%;
+//  border: none;
+//}
+//
+//.filter:focus-visible {
+//  outline: #005B8B 1px solid !important;
+//  border-radius: 0.3rem;
+//}
+//
+//.mdc-form-field>label {
+//  margin-left: 0;
+//  margin-right: auto;
+//  padding-left: 4px;
+//  padding-right: 0;
+//  order: 0;
+//  padding-top: 2px !important;
+//}
+//
+//.mat-mdc-menu-item:has(.material-icons, mat-icon, [matButtonIcon]) {
+//  padding-left: .7rem !important;
+//  padding-right: .7rem !important;
+//}
+//
+//.mat-datepicker-content .mat-calendar {
+//  height: 336px !important;
+//}
+//
+//.mat-calendar-controls {
+//  margin: 0 calc(4.7142857143% - 16px) 4% calc(4.7142857143% - 16px) !important;
+//
+//  .mat-mdc-icon-button.mat-mdc-button-base {
+//    --mdc-icon-button-state-layer-size: 40px !important;
+//  }
+//}
+//
+//.mat-calendar-body-comparison-identical.mat-calendar-body-selected,
+//.mat-calendar-body-in-comparison-range>.mat-calendar-body-selected {
+//  background: rgb(2, 92, 140) !important;
+//}
+//
+//.mat-date-range-input-container {
+//  background: rgba(1, 87, 133, 0.0588235294) !important;
+//}
+//
+//.mat-calendar-body-in-range>.mat-calendar-body-comparison-identical,
+//.mat-calendar-body-in-comparison-range.mat-calendar-body-in-range::after {
+//  background: rgba(2, 92, 140, 0.35) !important;
+//}
+//
+//.mat-calendar-body-comparison-identical,
+//.mat-calendar-body-in-comparison-range::before {
+//  background: rgba(0, 128, 0, 0.13) !important;
+//}
