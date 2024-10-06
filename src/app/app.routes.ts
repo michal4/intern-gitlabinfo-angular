@@ -9,5 +9,10 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import("../view/projects/projects.component")
       .then((m) => m.ProjectsComponent),
   },
+  {
+    path: "branches",
+    loadComponent: () => import("../view/branches/branches.component")
+      .then((m) => m.BranchesComponent),
+  },
   {path: 'gitlab-projects/:id', component: ProjectComponent}
 ];

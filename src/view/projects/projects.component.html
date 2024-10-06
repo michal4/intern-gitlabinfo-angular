@@ -20,23 +20,16 @@
 
 <div class="d-flex flex-row justify-content-between">
   <!-- Search  -->
-  <div class="d-flex flex-row">
-    <div class="input-group mb-3 w-50">
-      <input type="text"
-             class="form-control mb-3"
-             placeholder="Type to search..."
-             [(ngModel)]="commonFilter"
-             (change)="applyFilters()"
-             aria-describedby="basic-addon2">
-      <div class="input-group-append">
-      </div>
-    </div>
-    <div class="form-check m-2">
-      <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
-      <label class="form-check-label" for="defaultCheck1">
-        Use regular expression
-      </label>
-    </div>
+  <div class="common-filter-container">
+    <mat-form-field>
+      <mat-label>Search</mat-label>
+      <input #inputField matInput placeholder="Type to search..."
+             [value]="getValueFromCookie(commonFilter)"
+             (keyup)="saveToCookie('commonFilter', inputField.value)">
+    </mat-form-field>
+    <mat-checkbox [checked]="getUseRegex()" (change)="useRegexChange($event)">
+      Use regular expression
+    </mat-checkbox>
   </div>
 
 </div>
@@ -132,20 +125,21 @@
               </mat-select-trigger>
 
               <mat-option *ngFor="let error of possibleErrors"
-                          [value]="error.code"
+                          [value]="error"
                           (click)="toggleErrorSelection(error.code)">
                 {{ error.code }}
               </mat-option>
               <mat-option value="select-all"
-                          (click)="toggleAllKindsSelection()">
+                          (click)="toggleAllErrorsSelection()">
                 All
               </mat-option>
             </mat-select>
           </mat-form-field>
+
         </ng-container>
 
         <!--  select kinds  -->
-        <ng-container *ngIf="column.id === 'kind'">
+        <ng-container *ngIf="column.id === 'kinds'">
           <mat-form-field>
             <mat-label>Kinds</mat-label>
             <mat-select [formControl]="kindForm" multiple>
@@ -155,7 +149,7 @@
               </mat-select-trigger>
 
               <mat-option *ngFor="let kind of possibleKinds"
-                          [value]="kind.name"
+                          [value]="kind"
                           (click)="toggleKindSelection(kind.name)">
                 {{ kind.name }}
               </mat-option>
@@ -167,7 +161,8 @@
           </mat-form-field>
         </ng-container>
 
-        <ng-container *ngIf="column.id !== 'errors' && column.id !== 'kind'">
+        <!-- any -->
+        <ng-container *ngIf="column.id !== 'errors' && column.id !== 'kinds'">
           <mat-form-field>
             <mat-label>{{ column.label }}</mat-label>
             <input #inputField matInput [placeholder]="column.label"
@@ -192,7 +187,6 @@
           </mat-icon>
         </div>
       </div>
-
     </th>
 
     <td mat-cell *matCellDef="let row">
@@ -200,8 +194,30 @@
     </td>
   </ng-container>
 
-  <tr mat-header-row *matHeaderRowDef="selectedColumnIds"></tr>
-  <tr mat-row *matRowDef="let row; columns: selectedColumnIds;"></tr>
+  <!--  actions-->
+  <ng-container *ngIf="getSelectedColumns().length > 0" matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef>
+      <mat-label>Actions</mat-label>
+    </th>
+    <td mat-cell *matCellDef="let row">
+      <mat-icon aria-hidden="false"
+                aria-label="view info about project"
+                matTooltip="View details"
+                fontIcon="info"
+                (click)="goToGitLabProjectDetails(row)">
+      </mat-icon>
+      <mat-icon aria-hidden="false"
+                aria-label="view branches"
+                matTooltip="View branches"
+                fontIcon="polyline"
+                (click)="goToBranches(row)">
+      </mat-icon>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="selectedColumnIds.concat(['actions'])"></tr>
+  <tr mat-row *matRowDef="let row; columns: selectedColumnIds.concat(['actions'])"></tr>
+
 </table>
 
 </body>
