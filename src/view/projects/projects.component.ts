@@ -80,6 +80,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   private allKindsSelectedSubject = new Subject<boolean>();
   private allErrorsSelectedSubject = new Subject<boolean>();
   private useRegexSubject = new Subject<boolean>();
+  private commonFilterSubject = new Subject<string>();
 
   // Projects data
   projects: GitLabProject[] = [];
@@ -96,6 +97,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   // Filterable options
   possibleKinds: PossibleFilter[] = [];
   possibleErrors: PossibleError[] = [];
+  possibleArchivedType: PossibleFilter[] = [
+    {name: 'All projects', selected: false},
+    {name: 'Archived projects', selected: false},
+    {name: 'Live projects', selected: false}];
 
   // Selection states
   allColumnsSelected: boolean = true;
@@ -121,7 +126,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   columnsForm = new FormControl();
   errorForm = new FormControl();
   kindForm = new FormControl();
-
+  archivedForm = new FormControl();
 
   columns = [
     {id: ColumnId.name.toString(), label: 'Name', selected: true},
@@ -159,7 +164,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.sortOrderSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     this.sortColumnSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     this.useRegexSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
-
+    this.commonFilterSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     this.allColumnsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     this.allKindsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     this.allErrorsSelectedSubject.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
@@ -230,6 +235,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
 
     this.useRegex = this.cookieService.getCookie('userRegex') === 'true' || false;
+
+    const selectedArchivedTypes = this.cookieService.getCookie("archived");
+    //todo
   }
 
   updateCookie() {
@@ -263,14 +271,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const selectedErrors = this.possibleErrors
       .filter(error => error.selected)
       .map(error => error.code).join(",");
-
-    // console.log("update selectedErrors=" + selectedErrors)
     this.cookieService.setCookie(ColumnId.errors, selectedErrors.length ? selectedErrors : '');
-
-    // common filter
-    if (this.commonFilter !== undefined && this.commonFilter !== null) {
-      this.cookieService.setCookie("commonFilter", this.commonFilter);
-    }
 
     // todo
   }
@@ -502,7 +503,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   getRowValue(row: GitLabProject, columnId: string): string {
     switch (columnId) {
       case ColumnId.defaultBranch:
-        return row.defaultBranch.name;
+        return row.defaultBranch?.name ?? '';
       case ColumnId.parentArtifactId:
         return row.defaultBranch?.parent?.artifactId ?? '';
       case ColumnId.parentVersion:
@@ -526,6 +527,56 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     return Array.isArray(errors) ? errors.map(e => e.code).join(', ') : '';
   }
 
+  // applyFilters() {
+  //   const nameFilter = this.cookieService.getCookie(ColumnId.name) || '';
+  //   const defaultBranchFilter = this.cookieService.getCookie(ColumnId.defaultBranch) || '';
+  //   const parentArtifactIdFilter = this.cookieService.getCookie(ColumnId.parentArtifactId) || '';
+  //   const parentVersionFilter = this.cookieService.getCookie(ColumnId.parentVersion) || '';
+  //   const descriptionFilter = this.cookieService.getCookie(ColumnId.description) || '';
+  //   const commonFilter = this.cookieService.getCookie('commonFilter') || '';
+  //
+  //   // const useRegex = this.cookieService.getCookie('useRegex') || false;
+  //
+  //   const selectedKinds = this.getSelectedKinds();
+  //   let selectedErrors = this.getSelectedErrors()?.split(',').filter(error => error.trim() !== '') ?? [];
+  //   this.filteredData = this.projects.filter(project => {
+  //     const matchesName = project.name?.toLowerCase().includes(nameFilter.toLowerCase());
+  //     const matchesDefaultBranch = project.defaultBranch?.name?.toLowerCase().includes(defaultBranchFilter.toLowerCase());
+  //     const matchesParentArtifactId = project.defaultBranch?.parent?.artifactId?.toLowerCase().includes(parentArtifactIdFilter.toLowerCase());
+  //     const matchesParentVersion = project.defaultBranch?.parent?.version?.toLowerCase().includes(parentVersionFilter.toLowerCase());
+  //     const matchesDescription = project.description?.toLowerCase().includes(descriptionFilter.toLowerCase());
+  //
+  //     const matchesKind =
+  //       this.allKindsSelected ||
+  //       selectedKinds?.includes(project.kind);
+  //
+  //     const projectErrors = this.getErrors(project) ?? [];
+  //     let errors = projectErrors.split(',').filter(error => error.trim() !== '') ?? [];
+  //     // console.log('all selected errors= ' + this.allErrorsSelected)
+  //     const matchesErrors =
+  //       this.allErrorsSelected ||
+  //       selectedErrors.length === 0 ||
+  //       this.isErrorsSelected(errors, selectedErrors);
+  //
+  //     const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
+  //
+  //     return matchesName &&
+  //       matchesDefaultBranch &&
+  //       matchesParentArtifactId &&
+  //       matchesParentVersion &&
+  //       matchesDescription &&
+  //       matchesKind &&
+  //       matchesErrors &&
+  //       matchesCommonFilter;
+  //   });
+  //
+  //   console.log(this.filteredData)
+  //
+  //   const sortBy = this.cookieService.getCookie('sortBy')
+  //   const sortDest = this.cookieService.getCookie('sortDest')
+  //
+  //   this.sortData(sortBy, sortDest);
+  // }
 
   applyFilters() {
     const nameFilter = this.cookieService.getCookie(ColumnId.name) || '';
@@ -533,43 +584,120 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const parentArtifactIdFilter = this.cookieService.getCookie(ColumnId.parentArtifactId) || '';
     const parentVersionFilter = this.cookieService.getCookie(ColumnId.parentVersion) || '';
     const descriptionFilter = this.cookieService.getCookie(ColumnId.description) || '';
+    const commonFilter = this.cookieService.getCookie('commonFilter') || '';
+
+    const useRegex = this.cookieService.getCookie('useRegex') === 'true'; // use regex if cookie is set to 'true'
 
     const selectedKinds = this.getSelectedKinds();
     let selectedErrors = this.getSelectedErrors()?.split(',').filter(error => error.trim() !== '') ?? [];
+
     this.filteredData = this.projects.filter(project => {
-      const matchesName = project.name?.toLowerCase().includes(nameFilter.toLowerCase());
-      const matchesDefaultBranch = project.defaultBranch?.name?.toLowerCase().includes(defaultBranchFilter.toLowerCase());
-      const matchesParentArtifactId = project.defaultBranch?.parent?.artifactId?.toLowerCase().includes(parentArtifactIdFilter.toLowerCase());
-      const matchesParentVersion = project.defaultBranch?.parent?.version?.toLowerCase().includes(parentVersionFilter.toLowerCase());
-      const matchesDescription = project.description?.toLowerCase().includes(descriptionFilter.toLowerCase());
+      const matchesRegexOrIncludes = (value: string, filter: string) => {
+        if (useRegex) {
+          try {
+            const regex = new RegExp(filter, 'i'); // Case-insensitive regex
+            return regex.test(value || '');
+          } catch (e) {
+            console.error('Invalid regex pattern: ', filter);
+            return false;
+          }
+        } else {
+          return value?.toLowerCase().includes(filter.toLowerCase());
+        }
+      };
+
+      const matchesName = matchesRegexOrIncludes(project.name, nameFilter);
+      const matchesDefaultBranch = matchesRegexOrIncludes(project.defaultBranch?.name, defaultBranchFilter);
+      const matchesParentArtifactId = matchesRegexOrIncludes(project.defaultBranch?.parent?.artifactId ?? '', parentArtifactIdFilter);
+      const matchesParentVersion = matchesRegexOrIncludes(project.defaultBranch?.parent?.version ?? '', parentVersionFilter);
+      const matchesDescription = matchesRegexOrIncludes(project.description ?? '', descriptionFilter);
 
       const matchesKind =
-        this.allKindsSelected ||
-        selectedKinds?.includes(project.kind);
+        this.allKindsSelected || selectedKinds?.includes(project.kind);
 
       const projectErrors = this.getErrors(project) ?? [];
       let errors = projectErrors.split(',').filter(error => error.trim() !== '') ?? [];
-      // console.log('all selected errors= ' + this.allErrorsSelected)
       const matchesErrors =
         this.allErrorsSelected ||
         selectedErrors.length === 0 ||
         this.isErrorsSelected(errors, selectedErrors);
 
-      return matchesName &&
+      const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
+
+      return (
+        matchesName &&
         matchesDefaultBranch &&
         matchesParentArtifactId &&
         matchesParentVersion &&
         matchesDescription &&
         matchesKind &&
-        matchesErrors;
+        matchesErrors &&
+        matchesCommonFilter
+      );
     });
 
-    console.log(this.filteredData)
+    // console.log(this.filteredData);
 
-    const sortBy = this.cookieService.getCookie('sortBy')
-    const sortDest = this.cookieService.getCookie('sortDest')
+    const sortBy = this.cookieService.getCookie('sortBy');
+    const sortDest = this.cookieService.getCookie('sortDest');
 
     this.sortData(sortBy, sortDest);
+  }
+
+  isCommonFilterMatched(project: GitLabProject, commonFilter: string): boolean {
+    const propertiesToCheck: string[] = [
+      project.name,
+      project.url,
+      project.kind,
+      project.description ?? '',
+      project.cicd?.configurationFile ?? '',
+      this.getErrors(project)
+    ];
+    const checkMinProps = this.filter(propertiesToCheck, commonFilter);
+    if (checkMinProps) {
+      return checkMinProps;
+    }
+
+    const variables = project.cicd.variables;
+    for (const key in variables) {
+      if (variables.hasOwnProperty(key)) {
+        const keyIncl = key.toLowerCase().includes(commonFilter);
+        const valueIncl = variables[key].toLowerCase().includes(commonFilter);
+        if (keyIncl || valueIncl) {
+          return true;
+        }
+      }
+    }
+
+    const branches = project.branches;
+    for (let i = 0; i < branches.length; i++) {
+      const branch = branches[i];
+      const toCheck = [
+        branch.name,
+        branch.lastCommitCreatedAt,
+        branch.gitLabConfig,
+        branch.groupId,
+        branch.artifactId,
+        branch.parent?.artifactId,
+        branch.parent?.version,
+        this.getErrors(project)
+      ];
+      const checkBranchProps = this.filter(toCheck, commonFilter);
+      if (checkBranchProps) {
+        return checkBranchProps;
+      }
+    }
+
+    return false;
+  }
+
+  filter(propertiesToCheck: any[], filter: string) {
+    for (const prop of propertiesToCheck) {
+      if (prop?.toLowerCase().includes(filter)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   isErrorsSelected(errors: string[], selectedErrors: string[]) {
@@ -668,12 +796,18 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   highlightText(text: string, columnId: string): string {
+    if (text === '') {
+      return text;
+    }
     const searchValue = this.cookieService.getCookie(columnId);
+    const commonFilter = this.cookieService.getCookie('commonFilter');
+    if (!searchValue && !commonFilter) {
+      return text;
+    }
 
     if (columnId === ColumnId.kinds) {
       return searchValue?.includes(text) ? `<mark style="background-color: yellow;">${text}</mark>` : text;
     }
-
     if (columnId === ColumnId.errors) {
       const selectedErrors = searchValue?.trim().split(',').filter(item => item !== '');
       const curErrors = text?.replace(/\s+/g, '').split(',').filter(item => item !== '');
@@ -688,16 +822,21 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       return highlightedErrors.join(',');
     }
 
-    if (!searchValue) {
-      return text;
+    let highlightedText = text;
+    if (commonFilter) {
+      const commonFilterRegex = new RegExp(`(${commonFilter.split(',').join('|')})`, 'gi');
+      highlightedText = highlightedText.replace(commonFilterRegex, `<mark style="background-color: yellow;">$1</mark>`);
+    }
+    if (searchValue) {
+      const searchRegex = new RegExp(`(${searchValue.split(',').join('|')})`, 'gi');
+      highlightedText = highlightedText.replace(searchRegex, `<mark style="background-color: yellow;">$1</mark>`);
     }
 
-    const regex = new RegExp(`(${searchValue.split(',').join('|')})`, 'gi');
-    return text.replace(regex, `<mark style="background-color: yellow;">$1</mark>`);
+    return highlightedText;
   }
 
   goToGitLabProjectDetails(project: GitLabProject): void {
-    this.router.navigate(['/gitlab-projects', project.projectId]);
+    this.router.navigate(['/gitlab-project', project.projectId]);
   }
 
   goToBranches(project: GitLabProject): void {
@@ -706,15 +845,31 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   useRegexChange(event: MatCheckboxChange) {
     this.useRegex = event.checked;
-    this.saveToCookie('useRegex', this.useRegex.toString());
     this.useRegexSubject.next(this.useRegex);
+    this.cookieService.setCookie("useRegex", this.useRegex);
     this.applyFilters();
   }
 
   getUseRegex(): boolean {
     const useRegexFromCookie = this.getValueFromCookie('useRegex');
-    console.log('use regex = ' + (useRegexFromCookie === 'true'));
     return useRegexFromCookie === 'true' ? true : false;
   }
 
+  applyCommonFilter(filter: string) {
+    this.saveToCookie('commonFilter', filter);
+    this.commonFilterSubject.next(filter);
+  }
+
+  getSelectedArchived() {
+    //todo
+    return "";
+  }
+
+  toggleArchivedSelection(name: string) {
+    //todo
+  }
+
+  toggleAllArchivedSelection() {
+    //todo
+  }
 }

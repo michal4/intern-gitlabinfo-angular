@@ -1,5 +1,5 @@
-<!-- project.component.html -->
 <div class="container mt-4">
   <h2>Project Details</h2>
-  <pre>{{ rowData | json }}</pre>
+  <pre *ngIf="project">{{ project | json }}</pre>
+  <p *ngIf="!project">Loading project details...</p>
 </div>

@@ -24,12 +24,13 @@
     <mat-form-field>
       <mat-label>Search</mat-label>
       <input #inputField matInput placeholder="Type to search..."
-             [value]="getValueFromCookie(commonFilter)"
-             (keyup)="saveToCookie('commonFilter', inputField.value)">
+             [value]="getValueFromCookie('commonFilter')"
+             (keyup)="applyCommonFilter(inputField.value)">
     </mat-form-field>
     <mat-checkbox [checked]="getUseRegex()" (change)="useRegexChange($event)">
       Use regular expression
     </mat-checkbox>
+
   </div>
 
 </div>
@@ -87,26 +88,50 @@
     </div>
   </div>
 
-  <!--  select columns-->
-  <mat-form-field>
-    <mat-label>Columns</mat-label>
-    <mat-select [formControl]="columnsForm" multiple>
+  <div class="filter-container">
+    <!--  archived todo-->
+    <mat-form-field>
+      <mat-label>Archived</mat-label>
+      <mat-select [formControl]="archivedForm" multiple>
 
-      <mat-select-trigger>
-        {{ columnsForm.value?.length ? columnsForm.value.length : '' }}/ {{ columns.length }}
-      </mat-select-trigger>
+        <mat-select-trigger>
+          {{ getSelectedArchived() }}
+        </mat-select-trigger>
 
-      <mat-option *ngFor="let column of columns"
-                  [value]="column"
-                  (click)="toggleColumnSelection(column.id)">
-        {{ column.label }}
-      </mat-option>
-      <mat-option value="select-all"
-                  (click)="toggleAllColumnsSelection()">
-        All
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+        <mat-option *ngFor="let type of possibleArchivedType"
+                    [value]="type"
+                    (click)="toggleArchivedSelection(type.name)">
+          {{ type.name }}
+        </mat-option>
+        <mat-option value="select-all"
+                    (click)="toggleAllArchivedSelection()">
+          All
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!--  select columns-->
+    <mat-form-field>
+      <mat-label>Columns</mat-label>
+      <mat-select [formControl]="columnsForm" multiple>
+
+        <mat-select-trigger>
+          {{ columnsForm.value?.length ? columnsForm.value.length : '' }}/ {{ columns.length }}
+        </mat-select-trigger>
+
+        <mat-option *ngFor="let column of columns"
+                    [value]="column"
+                    (click)="toggleColumnSelection(column.id)">
+          {{ column.label }}
+        </mat-option>
+        <mat-option value="select-all"
+                    (click)="toggleAllColumnsSelection()">
+          All
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
 </div>
 
 <table mat-table [dataSource]="paginatedData">
@@ -216,7 +241,8 @@
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="selectedColumnIds.concat(['actions'])"></tr>
-  <tr mat-row *matRowDef="let row; columns: selectedColumnIds.concat(['actions'])"></tr>
+  <tr mat-row *matRowDef="let row; columns: selectedColumnIds.concat(['actions'])"
+      [ngClass]="{'archived': row.archived}"></tr>
 
 </table>
 

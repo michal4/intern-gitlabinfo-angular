@@ -28,7 +28,12 @@
   cursor: pointer;
 }
 
-.common-filter-container {
+.common-filter-container, .filter-container {
   display: inline-flex;
   align-items: center;
+}
+
+.archived {
+  color: rgba(99, 99, 99, 0.5);
+  background: rgba(128, 128, 128, 0.05);
 }
