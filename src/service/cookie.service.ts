@@ -1,11 +1,12 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CookieService {
 
-  constructor() { }
+  constructor() {
+  }
 
   /**
    * Set a cookie with a specified expiration date.
@@ -22,7 +23,7 @@ export class CookieService {
     }
     document.cookie = `${name}=${value || ''}${expires}; path=/`;
   }
-  
+
   /**
    * Get the value of a cookie by its name.
    * @param name Name of the cookie to retrieve.
