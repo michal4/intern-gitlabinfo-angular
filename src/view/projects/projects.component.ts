@@ -392,6 +392,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.allErrorsSelectedSubject.next(this.allErrorsSelected);
   }
 
+  toggleAllArchivedSelection() {
+    //todo
+  }
+
   toggleColumnSelection(columnId: string): void {
     const column = this.columns.find(col => col.id === columnId);
     if (column) {
@@ -437,6 +441,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
   }
 
+  toggleArchivedSelection(name: string) {
+    //todo
+  }
+
   onItemsPerPageChange() {
     if (this.selectedItemsPerPageOption === 'custom') {
       this.customRowsPerPage = null;
@@ -468,11 +476,23 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.sortDirection = dist === 'asc' ? 'asc' : 'desc';
         this.sortColumnSubject.next(this.sortColumn);
         this.sortOrderSubject.next(this.sortDirection);
-        this.filteredData.sort((a, b) => {
-          const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
-          const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
-          return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
-        });
+
+        if(columnId !== ColumnId.errors) {
+          this.filteredData.sort((a, b) => {
+            const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
+            const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
+            return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+          });
+        } else {
+            this.filteredData.sort((a, b) => {
+              const errorsA = this.getErrorValues(a);
+              const errorsB = this.getErrorValues(b);
+              const codesA = errorsA.map(e=>e.code).join('');
+              const codesB = errorsB.map(e=>e.code).join('');
+              if (codesA.length === 0 && codesB.length === 0) return 0;
+              return (codesA > codesB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+            });
+        }
       }
     }
     this.updatePaginatedData();
@@ -520,9 +540,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       return false;
     });
 
+    allErrors.sort((a, b) => a.code.localeCompare(b.code));
+
     return allErrors;
   }
-
 
   getErrors(project: GitLabProject): string {
     return this.displayTextUtils.getErrors(project);
@@ -758,16 +779,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     return "";
   }
 
-  toggleArchivedSelection(name: string) {
-    //todo
-  }
-
-  toggleAllArchivedSelection() {
-    //todo
-  }
-
   highlightText(rowValue: string, id: any) {
     return this.displayTextUtils.highlight(rowValue, id, this.useRegex);
+  }
+
+  higlightError(error: ModelError) {
+    return this.displayTextUtils.highlightError(error)
   }
 
   goToGitLabProjectDetails(project: GitLabProject): void {

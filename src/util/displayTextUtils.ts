@@ -1,4 +1,4 @@
-import { GitLabProject } from 'intern-gitlabinfo-openapi-angular';
+import {GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
 import {ColumnId} from '../model/column-id.enum';
 import {CookieService} from '../service/cookie.service';
 
@@ -20,19 +20,6 @@ export class DisplayTextUtils {
 
     if (columnId === ColumnId.kinds) {
       return searchValue?.includes(text) ? `<mark style="background-color: yellow;">${text}</mark>` : text;
-    }
-    if (columnId === ColumnId.errors) {
-      const selectedErrors = searchValue?.trim().split(',').filter(item => item !== '');
-      const curErrors = text?.replace(/\s+/g, '').split(',').filter(item => item !== '');
-
-      const highlightedErrors = curErrors.map((curErr, i) => {
-        const isHighlighted = selectedErrors?.includes(curErr);
-        return isHighlighted
-          ? `<mark style="background-color: yellow;">${curErr}</mark>`
-          : curErr;
-      });
-
-      return highlightedErrors.join(',');
     }
 
     let highlightedText = text;
@@ -64,6 +51,18 @@ export class DisplayTextUtils {
     }
 
     return highlightedText;
+  }
+
+  highlightError(error: ModelError) {
+    const selectedErrosPlain = this.cookieService.getCookie(ColumnId.errors);
+    if (!selectedErrosPlain) {
+      return error.code;
+    }
+    const selectedErros = selectedErrosPlain.split(',');
+    if(selectedErros.includes(error.code)) {
+      return `<mark style="background-color: yellow;">${error.code}</mark>`;
+    }
+    return error.code;
   }
 
   getRowValue(project: GitLabProject, columnId: string): string {
