@@ -1,5 +1,5 @@
 import {GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
-import {ColumnId} from '../model/column-id.enum';
+import {ColumnId} from '../model/columns';
 import {CookieService} from '../service/cookie.service';
 
 export class DisplayTextUtils {
@@ -8,7 +8,7 @@ export class DisplayTextUtils {
   }
 
   highlight(text: string, columnId: string, useRegex: boolean): string {
-    if (text === '') {
+    if (text === '' || columnId === ColumnId.KINDS) {
       return text;
     }
 
@@ -16,10 +16,6 @@ export class DisplayTextUtils {
     const commonFilter = this.cookieService.getCookie('commonFilter');
     if (!searchValue && !commonFilter) {
       return text;
-    }
-
-    if (columnId === ColumnId.kinds) {
-      return searchValue?.includes(text) ? `<mark style="background-color: yellow;">${text}</mark>` : text;
     }
 
     let highlightedText = text;
@@ -54,7 +50,7 @@ export class DisplayTextUtils {
   }
 
   highlightError(error: ModelError) {
-    const selectedErrosPlain = this.cookieService.getCookie(ColumnId.errors);
+    const selectedErrosPlain = this.cookieService.getCookie(ColumnId.ERRORS);
     if (!selectedErrosPlain) {
       return error.code;
     }
@@ -67,13 +63,13 @@ export class DisplayTextUtils {
 
   getRowValue(project: GitLabProject, columnId: string): string {
     switch (columnId) {
-      case ColumnId.defaultBranch:
+      case ColumnId.DEFAULT_BRANCH:
         return project.defaultBranch?.name ?? '';
-      case ColumnId.parentArtifactId:
+      case ColumnId.PARENT_ARTIFACT_ID:
         return project.defaultBranch?.parent?.artifactId ?? '';
-      case ColumnId.parentVersion:
+      case ColumnId.PARENT_VERSION:
         return project.defaultBranch?.parent?.version ?? '';
-      case ColumnId.kinds:
+      case ColumnId.KINDS:
         return project.kind;
       default:
         return project[columnId as keyof GitLabProject]?.toString() ?? '';

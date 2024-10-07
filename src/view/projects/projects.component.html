@@ -76,10 +76,10 @@
       <mat-select [formControl]="archivedForm" multiple>
 
         <mat-select-trigger>
-          {{ getSelectedArchived() }}
+          {{ getSelectedArchivedName() }}
         </mat-select-trigger>
 
-        <mat-option *ngFor="let type of possibleArchivedType"
+        <mat-option *ngFor="let type of archivedTypes"
                     [value]="type"
                     (click)="toggleArchivedSelection(type.name)">
           {{ type.name }}
@@ -93,7 +93,7 @@
       <mat-select [formControl]="columnsForm" multiple>
 
         <mat-select-trigger>
-          {{ columnsForm.value?.length ? columnsForm.value.length : '' }}/ {{ columns.length }}
+          {{ getSelectedColumns().length}}/ {{ columns.length - 1}}
         </mat-select-trigger>
 
         <mat-option *ngFor="let column of columns"
@@ -101,10 +101,7 @@
                     (click)="toggleColumnSelection(column.id)">
           {{ column.label }}
         </mat-option>
-        <mat-option value="select-all"
-                    (click)="toggleAllColumnsSelection()">
-          All
-        </mat-option>
+
       </mat-select>
     </mat-form-field>
   </div>
@@ -112,8 +109,7 @@
 </div>
 
 <table mat-table [dataSource]="paginatedData">
-  <ng-container *ngFor="let column of getSelectedColumns()"
-                [matColumnDef]="column.id">
+  <ng-container *ngFor="let column of selectedColumns" [matColumnDef]="column.id">
     <th mat-header-cell *matHeaderCellDef>
       <div class="table-header-cell">
         <!--  select errors  -->
@@ -123,17 +119,13 @@
             <mat-select [formControl]="errorForm" multiple>
 
               <mat-select-trigger>
-                {{ getSelectedErrors() }}
+                {{ getSelectedErrorCodes() }}
               </mat-select-trigger>
 
-              <mat-option *ngFor="let error of possibleErrors"
+              <mat-option *ngFor="let error of errors"
                           [value]="error"
                           (click)="toggleErrorSelection(error.code)">
                 {{ error.code }}
-              </mat-option>
-              <mat-option value="select-all"
-                          (click)="toggleAllErrorsSelection()">
-                All
               </mat-option>
             </mat-select>
           </mat-form-field>
@@ -147,17 +139,13 @@
             <mat-select [formControl]="kindForm" multiple>
 
               <mat-select-trigger>
-                {{ getSelectedKinds() }}
+                {{ getSelectedKindsName() }}
               </mat-select-trigger>
 
-              <mat-option *ngFor="let kind of possibleKinds"
+              <mat-option *ngFor="let kind of kinds"
                           [value]="kind"
                           (click)="toggleKindSelection(kind.name)">
                 {{ kind.name }}
-              </mat-option>
-              <mat-option value="select-all"
-                          (click)="toggleAllKindsSelection()">
-                All
               </mat-option>
             </mat-select>
           </mat-form-field>
