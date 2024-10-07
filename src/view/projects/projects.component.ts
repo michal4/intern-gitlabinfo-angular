@@ -20,7 +20,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatDividerModule} from '@angular/material/divider'; // <-- Add MatDividerModule
 import {Router} from '@angular/router';
 import {ColumnId} from '../../model/column-id.enum';
-import { DisplayTextUtils } from '../../util/displayTextUtils';
+import {DisplayTextUtils} from '../../util/displayTextUtils';
 
 interface PossibleFilter {
   name: string;
@@ -40,6 +40,12 @@ export enum DropdownType {
   COLUMNS = 'columnsOpen',
   KIND = 'kindOpen',
   ERRORS = 'errorsOpen'
+}
+
+export enum ArchivedType {
+  ALL = 'All projects',
+  ARCHIVED = 'Archived projects',
+  LIVE = 'Live projects'
 }
 
 @Component({
@@ -99,9 +105,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   possibleKinds: PossibleFilter[] = [];
   possibleErrors: PossibleError[] = [];
   possibleArchivedType: PossibleFilter[] = [
-    {name: 'All projects', selected: false},
-    {name: 'Archived projects', selected: false},
-    {name: 'Live projects', selected: false}];
+    {name: ArchivedType.ALL, selected: true},
+    {name: ArchivedType.ARCHIVED, selected: true},
+    {name: ArchivedType.LIVE, selected: true}];
 
   // Selection states
   allColumnsSelected: boolean = true;
@@ -141,6 +147,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   private columnSubjects: { [key: string]: Subject<void> } = {};
   private kindSubjects: { [key: string]: Subject<void> } = {};
   private errorSubjects: { [key: string]: Subject<void> } = {};
+  private archivedSubjects: { [key: string]: Subject<void> } = {};
 
   @ViewChild(MatSort) sort: MatSort | undefined;
 
@@ -240,8 +247,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
     this.useRegex = this.cookieService.getCookie('userRegex') === 'true' || false;
 
-    const selectedArchivedTypes = this.cookieService.getCookie("archived");
-    //todo
+    this.setPossibleArchived();
   }
 
   updateCookie() {
@@ -277,6 +283,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       .map(error => error.code).join(",");
     this.cookieService.setCookie(ColumnId.errors, selectedErrors.length ? selectedErrors : '');
 
+    // archivedType
+    const selectedArchivedTypes = this.possibleArchivedType
+      .filter(type => type.selected)
+      .map(type => type.name).join(",");
+    this.cookieService.setCookie('archived', selectedArchivedTypes.length ? selectedArchivedTypes : '');
   }
 
   setPossibleKinds() {
@@ -343,6 +354,20 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.errorForm.setValue(selectedErrors)
   }
 
+  setPossibleArchived() {
+    const cookiedArhived = this.cookieService.getCookie('archived')?.split(',') || [];
+    for (let i = 0; i < this.possibleArchivedType.length; i++) {
+      const archived = this.possibleArchivedType[i];
+      this.possibleArchivedType[i].selected = cookiedArhived.includes(archived.name);
+      if (!this.archivedSubjects[archived.name]) {
+        this.archivedSubjects[archived.name] = new Subject<void>();
+      }
+      this.archivedSubjects[archived.name].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
+    }
+    const selectedArchived = this.possibleArchivedType.filter(t=>t.selected);
+    this.archivedForm.setValue(selectedArchived);
+  }
+
   get totalPages() {
     return this.itemsPerPage === 'all'
       ? 1
@@ -392,10 +417,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.allErrorsSelectedSubject.next(this.allErrorsSelected);
   }
 
-  toggleAllArchivedSelection() {
-    //todo
-  }
-
   toggleColumnSelection(columnId: string): void {
     const column = this.columns.find(col => col.id === columnId);
     if (column) {
@@ -442,7 +463,31 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   toggleArchivedSelection(name: string) {
-    //todo
+    const archivedType = this.possibleArchivedType.find(t => t.name === name);
+    if (archivedType) {
+      archivedType.selected = !archivedType.selected;
+      if (name === ArchivedType.ALL) {
+        this.possibleArchivedType.every(e => e.selected = archivedType.selected);
+        this.archivedForm.setValue(archivedType.selected ? this.possibleArchivedType : []);
+      } else {
+        const allSelected = this.possibleArchivedType
+          .filter(t => t.name !== ArchivedType.ALL)
+          .map(t => t.selected);
+        const areAllSelectedSame = new Set(allSelected).size === 1;
+        let allType = this.possibleArchivedType
+          .filter(t => t.name === ArchivedType.ALL)[0];
+        if (areAllSelectedSame) {
+          allType.selected = allSelected[0];
+        } else {
+          allType.selected = false;
+        }
+        const selectedTypes = this.possibleArchivedType.filter(t => t.selected) || [];
+        this.archivedForm.setValue(selectedTypes)
+      }
+      this.archivedSubjects[name].next();
+      console.log(this.possibleArchivedType)
+      this.applyFilters();
+    }
   }
 
   onItemsPerPageChange() {
@@ -477,21 +522,21 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.sortColumnSubject.next(this.sortColumn);
         this.sortOrderSubject.next(this.sortDirection);
 
-        if(columnId !== ColumnId.errors) {
+        if (columnId !== ColumnId.errors) {
           this.filteredData.sort((a, b) => {
             const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
             const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
             return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
           });
         } else {
-            this.filteredData.sort((a, b) => {
-              const errorsA = this.getErrorValues(a);
-              const errorsB = this.getErrorValues(b);
-              const codesA = errorsA.map(e=>e.code).join('');
-              const codesB = errorsB.map(e=>e.code).join('');
-              if (codesA.length === 0 && codesB.length === 0) return 0;
-              return (codesA > codesB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
-            });
+          this.filteredData.sort((a, b) => {
+            const errorsA = this.getErrorValues(a);
+            const errorsB = this.getErrorValues(b);
+            const codesA = errorsA.map(e => e.code).join('');
+            const codesB = errorsB.map(e => e.code).join('');
+            if (codesA.length === 0 && codesB.length === 0) return 0;
+            return (codesA > codesB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+          });
         }
       }
     }
@@ -559,6 +604,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const useRegex = this.cookieService.getCookie('useRegex') === 'true';
     const selectedKinds = this.getSelectedKinds();
     let selectedErrors = this.getSelectedErrors()?.split(',').filter(error => error.trim() !== '') ?? [];
+    const selectedArchived = this.getSelectedArchived()?.split(',').filter(type => type.trim() !== '') ?? [];
+    const mustBeLive = selectedArchived.includes(ArchivedType.LIVE);
+    const allArchivedType = selectedArchived.includes(ArchivedType.ALL);
 
     this.filteredData = this.projects.filter(project => {
       const matchesRegexOrIncludes = (value: string, filter: string) => {
@@ -587,7 +635,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.allErrorsSelected ||
         selectedErrors.length === 0 ||
         this.isErrorsSelected(errors, selectedErrors);
-      const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
+
+      const isArchived = project.archived;
+      const matchesArchived = allArchivedType || (mustBeLive && !isArchived || !mustBeLive && isArchived);
+
+      const matchesCommonFilter = selectedArchived.length !== 0 && (this.isCommonFilterMatched(project, commonFilter.toLowerCase()));
 
       return (
         matchesName &&
@@ -597,7 +649,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         matchesDescription &&
         matchesKind &&
         matchesErrors &&
-        matchesCommonFilter
+        matchesCommonFilter &&
+        matchesArchived
       );
     });
     // sort
@@ -775,8 +828,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getSelectedArchived() {
-    //todo
-    return "";
+    const types = this.cookieService.getCookie('archived');
+    if (types?.includes(ArchivedType.ALL)) {
+      return ArchivedType.ALL;
+    }
+    return types;
   }
 
   highlightText(rowValue: string, id: any) {
