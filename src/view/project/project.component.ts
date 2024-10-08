@@ -32,7 +32,6 @@ export class ProjectComponent implements OnInit {
   }
 
   loadProject(id: number): void {
-    console.log('load project eith id ' + id)
     this.projectService.getProjectById(id).subscribe(
       (project: GitLabProject) => {
         this.project = project;
@@ -40,8 +39,6 @@ export class ProjectComponent implements OnInit {
       (error: any) => {
         console.error('Error fetching project:', error);
       });
-
-    console.log(this.project)
   }
 
 }

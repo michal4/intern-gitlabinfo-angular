@@ -1,4 +1,7 @@
-<h1>GitLab Projects</h1>
+<h1>GitLab Projects
+</h1>
+<p>The last update was <span>{{ loadDateTime }}</span></p>
+
 
 <div class="d-flex flex-row justify-content-between">
   <!-- Search  -->
@@ -93,7 +96,7 @@
       <mat-select [formControl]="columnsForm" multiple>
 
         <mat-select-trigger>
-          {{ getSelectedColumns().length}}/ {{ columns.length - 1}}
+          {{ getSelectedColumns().length }}/ {{ columns.length - 1 }}
         </mat-select-trigger>
 
         <mat-option *ngFor="let column of columns"

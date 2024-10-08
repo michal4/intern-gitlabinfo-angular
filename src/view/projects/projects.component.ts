@@ -1,7 +1,7 @@
 import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {NgClass, NgForOf, NgIf} from "@angular/common";
+import {DatePipe, NgClass, NgForOf, NgIf} from "@angular/common";
 import {FormControl, FormsModule, ReactiveFormsModule} from "@angular/forms";
-import {GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
+import {GetGitLabProjects200Response, GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
 import {ProjectService} from '../../service/project.service';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from '../../service/cookie.service';
@@ -62,6 +62,7 @@ export const ALL = 'All';
     MatTooltipModule,
     MatDividerModule
   ],
+  providers: [DatePipe],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
 })
@@ -81,6 +82,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   projects: GitLabProject[] = [];
   filteredData: GitLabProject[] = [];
   paginatedData: GitLabProject[] = [];
+  loadDateTime: String = '';
 
   // Dropdown state management
   dropdownState: Record<DropdownType, boolean> = {
@@ -135,7 +137,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   constructor(private projectService: ProjectService,
               private cookieService: CookieService,
-              private router: Router
+              private router: Router,
+              private datePipe: DatePipe
   ) {
     this.displayTextUtils = new DisplayTextUtils(this.cookieService);
   }
@@ -166,8 +169,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   loadProjects() {
     this.projectService.getGitLabProjects().subscribe(
-      (data: GitLabProject[]) => {
-        this.projects = data;
+      (data: GetGitLabProjects200Response) => {
+        this.projects = data.projects ?? [];
+        this.loadDateTime = this.datePipe.transform(data?.timestamp, 'yyyy-MM-dd HH:mm:ss') ?? '';
         this.filteredData = [...this.projects];
         this.setKinds();
         this.setErrors();
@@ -594,7 +598,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             return false;
           }
         } else {
-          return value?.toLowerCase().includes(filter.toLowerCase());
+          return value?.toLowerCase().includes(filter.toLowerCase()) || filter === '';
         }
       };
       const matchesName = matchesRegexOrIncludes(project.name, nameFilter);
@@ -749,7 +753,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (saved.includes(ALL)) {
       return ALL;
     }
-    return this.errors.find(error => saved.includes(error.code))?.code || '';
+    return this.errors.filter(e=>e.code !== ALL && e.selected).map(e=>e.code).join(',');
   }
 
   onCustomRowsChange(event: any): void {
@@ -852,4 +856,5 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
 }

@@ -5,7 +5,8 @@ import {
   BranchesService,
   GitLabProject,
   GitLabProjectsService,
-  GitLabProjectService
+  GitLabProjectService,
+  GetGitLabProjects200Response
 } from 'intern-gitlabinfo-openapi-angular';
 
 @Injectable({
@@ -17,7 +18,7 @@ export class ProjectService {
               private branchesService: BranchesService) {
   }
 
-  getGitLabProjects(): Observable<GitLabProject[]> {
+  getGitLabProjects(): Observable<GetGitLabProjects200Response> {
     return this.gitLabProjectsService.getGitLabProjects();
   }
 
