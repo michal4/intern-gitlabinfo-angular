@@ -22,41 +22,41 @@ export const columnSettings: Record<ColumnId, Column> = {
   [ColumnId.NAME]: {
     id: ColumnId.NAME,
     label: "Name",
-    selected: true,
+    selected: true
   },
   [ColumnId.DEFAULT_BRANCH]: {
     id: ColumnId.DEFAULT_BRANCH,
     label: "Default Branch",
-    selected: true,
+    selected: true
   },
   [ColumnId.PARENT_ARTIFACT_ID]: {
     id: ColumnId.PARENT_ARTIFACT_ID,
     label: "Parent ArtifactId",
-    selected: true,
+    selected: true
   },
   [ColumnId.PARENT_VERSION]: {
     id: ColumnId.PARENT_VERSION,
     label: "Parent Version",
-    selected: true,
+    selected: true
   },
   [ColumnId.ERRORS]: {
     id: ColumnId.ERRORS,
     label: "Errors",
-    selected: true,
+    selected: true
   },
   [ColumnId.KINDS]: {
     id: ColumnId.KINDS,
     label: "Kinds",
-    selected: true,
+    selected: true
   },
   [ColumnId.DESCRIPTION]: {
     id: ColumnId.DESCRIPTION,
     label: "Description",
-    selected: true,
+    selected: true
   },
   [ColumnId.ALL]: {
     id: ColumnId.ALL,
     label: "All",
-    selected: true,
+    selected: true
   },
 };

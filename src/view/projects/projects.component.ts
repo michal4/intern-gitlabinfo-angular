@@ -23,6 +23,7 @@ import {Column, ColumnId, columnSettings} from '../../model/columns';
 import {Error} from '../../model/errors';
 import {DisplayTextUtils} from '../../util/displayTextUtils';
 import {archivedSelectSettings, ArchivedType, Filter} from '../../model/filters';
+import {ResizableModule} from '../../components/resizable/resizable.module';
 
 
 const DEFAULT_ITEMS_PER_PAGE = 5;
@@ -38,6 +39,7 @@ export const ARCHIVED = 'archived';
 export const COMMON_FILTER = 'commonFilter';
 export const COLUMNS = 'columns';
 export const ALL = 'All';
+
 
 @Component({
   selector: 'app-projects',
@@ -60,7 +62,8 @@ export const ALL = 'All';
     MatMenuModule,
     MatIconModule,
     MatTooltipModule,
-    MatDividerModule
+    MatDividerModule,
+    ResizableModule
   ],
   providers: [DatePipe],
   templateUrl: './projects.component.html',
@@ -108,7 +111,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   commonFilter: string = '';
   useRegex: any;
 
-  selectedColumnIds: any;
+  selectedColumnIds: any = [];
 
   columnsForm: FormControl<Column[]> = new FormControl();
   archivedForm: FormControl<Filter[]> = new FormControl();
@@ -176,6 +179,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.setKinds();
         this.setErrors();
         this.applyFilters();
+        this.applyColumnWidths();
       }
     );
   }
@@ -339,6 +343,26 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
     const selectedArchived = this.archivedTypes.filter(t => t.selected);
     this.archivedForm.setValue(selectedArchived);
+  }
+
+  applyColumnWidths() {
+    const totalWidth = window.innerWidth;
+    const defaultWidth = totalWidth / this.selectedColumns.length + 1;
+    let columns = this.selectedColumns.map(c=>c.id.toString()) ?? [];
+    columns.push('actions');
+    columns.forEach(id => {
+      const savedWidth = this.getWidthFromCookie(id);
+      const width = savedWidth ? `${savedWidth}px` : `${defaultWidth}px`;
+      const columnElement = document.getElementById(id);
+      if (columnElement) {
+        columnElement.style.width = width;
+      }
+    });
+  }
+
+  getWidthFromCookie(columnId: string): number | null {
+    const cookieValue = this.cookieService.getCookie(`${columnId}_width`);
+    return cookieValue ? parseInt(cookieValue, 10) : null;
   }
 
   get totalPages() {
@@ -601,6 +625,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
           return value?.toLowerCase().includes(filter.toLowerCase()) || filter === '';
         }
       };
+
       const matchesName = matchesRegexOrIncludes(project.name, nameFilter);
       const matchesDefaultBranch = matchesRegexOrIncludes(project.defaultBranch?.name, defaultBranchFilter);
       const matchesParentArtifactId = matchesRegexOrIncludes(project.defaultBranch?.parent?.artifactId ?? '', parentArtifactIdFilter);
@@ -612,7 +637,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       const matchesErrors = allErrors || selectedErrors.length === 0 || this.isErrorsSelected(errors, selectedErrors);
       const isArchived = project.archived;
       const matchesArchived = allArchivedType || (mustBeLive && !isArchived || !mustBeLive && isArchived);
-      const matchesCommonFilter = selectedArchived.length !== 0 && (this.isCommonFilterMatched(project, commonFilter.toLowerCase()));
+      const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
 
       return (
         matchesName &&
@@ -622,8 +647,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         matchesDescription &&
         matchesKind &&
         matchesErrors &&
-        matchesCommonFilter &&
-        matchesArchived
+        matchesArchived &&
+        matchesCommonFilter
       );
     });
     // sort
@@ -753,7 +778,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (saved.includes(ALL)) {
       return ALL;
     }
-    return this.errors.filter(e=>e.code !== ALL && e.selected).map(e=>e.code).join(',');
+    return this.errors.filter(e => e.code !== ALL && e.selected).map(e => e.code).join(',');
   }
 
   onCustomRowsChange(event: any): void {
@@ -857,4 +882,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  onColumnResize(event: Event, columnId: ColumnId) {
+    console.log('resize')
+    console.log(columnId)
+    const target = event.target as HTMLElement;
+    const width = target.style.width;
+    if (width) {
+      this.saveToCookie(columnId + '_width', width);
+    }
+  }
 }
