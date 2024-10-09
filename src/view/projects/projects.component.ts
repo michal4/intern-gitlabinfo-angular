@@ -178,8 +178,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.filteredData = [...this.projects];
         this.setKinds();
         this.setErrors();
-        this.applyFilters();
+        this.setPageSize();
         this.applyColumnWidths();
+        this.applyFilters();
       }
     );
   }
@@ -187,22 +188,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   setInitialValues() {
     // current page number
     this.currentPage = Number(this.cookieService.getCookie("page")) || 1;
-
-    // items per page
-    const itemsPerPageCookie = this.cookieService.getCookie("size");
-    if (itemsPerPageCookie) {
-      if (itemsPerPageCookie === 'custom' || itemsPerPageCookie === 'all') {
-        this.selectedItemsPerPageOption = itemsPerPageCookie;
-      } else {
-        const parsedValue = Number(itemsPerPageCookie);
-        this.selectedItemsPerPageOption = isNaN(parsedValue) ? undefined : parsedValue;
-      }
-    } else {
-      this.selectedItemsPerPageOption = this.itemsPerPageOptions[0];
-    }
-    this.itemsPerPage = this.selectedItemsPerPageOption === 'all' || this.selectedItemsPerPageOption === 'custom'
-      ? this.selectedItemsPerPageOption
-      : (this.selectedItemsPerPageOption as number || DEFAULT_ITEMS_PER_PAGE);
 
     // columns
     const selectedColumns = this.cookieService.getCookie(COLUMNS);
@@ -239,7 +224,14 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       this.cookieService.setCookie("page", this.currentPage.toString());
     }
     if (this.itemsPerPage !== undefined && this.itemsPerPage !== null) {
-      this.cookieService.setCookie("size", this.itemsPerPage.toString());
+      let number = this.itemsPerPage.toString();
+      if (this.selectedItemsPerPageOption === 'custom') {
+        number = this.customRowsPerPage;
+      }
+      if (this.selectedItemsPerPageOption === 'all') {
+        number = this.selectedItemsPerPageOption;
+      }
+      this.cookieService.setCookie("size", number);
     }
     if (this.sortDirection !== undefined && this.sortDirection !== null) {
       this.cookieService.setCookie("sortDest", this.sortDirection.toString());
@@ -345,10 +337,39 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.archivedForm.setValue(selectedArchived);
   }
 
+  setPageSize() {
+    const itemsPerPageCookie = this.cookieService.getCookie("size");
+    if (itemsPerPageCookie) {
+      if (itemsPerPageCookie === 'all') {
+        this.selectedItemsPerPageOption = itemsPerPageCookie;
+      } else {
+        const parsedValue = Number(itemsPerPageCookie);
+        if (this.itemsPerPageOptions.includes(parsedValue)) {
+          this.selectedItemsPerPageOption = isNaN(parsedValue) ? DEFAULT_ITEMS_PER_PAGE : parsedValue;
+        } else {
+          this.selectedItemsPerPageOption = 'custom';
+          this.customRowsPerPage = parsedValue;
+        }
+      }
+    } else {
+      this.selectedItemsPerPageOption = this.itemsPerPageOptions[0];
+    }
+
+    if (this.selectedItemsPerPageOption === 'all') {
+      this.itemsPerPage = this.filteredData.length;
+    }
+    if (this.selectedItemsPerPageOption === 'custom') {
+      this.itemsPerPage = this.customRowsPerPage;
+    }
+    if (typeof this.selectedItemsPerPageOption === 'number') {
+      this.itemsPerPage = this.selectedItemsPerPageOption;
+    }
+  }
+
   applyColumnWidths() {
     const totalWidth = window.innerWidth;
     const defaultWidth = totalWidth / this.selectedColumns.length + 1;
-    let columns = this.selectedColumns.map(c=>c.id.toString()) ?? [];
+    let columns = this.selectedColumns.map(c => c.id.toString()) ?? [];
     columns.push('actions');
     columns.forEach(id => {
       const savedWidth = this.getWidthFromCookie(id);
@@ -551,6 +572,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (endIndex > this.filteredData.length) {
       endIndex = this.filteredData.length;
     }
+
     let startIndex: number;
     if (this.currentPage > 1) {
       startIndex = (this.currentPage - 1) * (this.itemsPerPage === 'all' ? this.filteredData.length : this.itemsPerPage as number);
@@ -786,6 +808,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (customValue >= 0) {
       this.customRowsPerPage = customValue;
       this.itemsPerPage = customValue;
+      this.itemsPerPageSubject.next(this.itemsPerPage);
       this.updatePaginatedData();
     }
   }
@@ -883,8 +906,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   onColumnResize(event: Event, columnId: ColumnId) {
-    console.log('resize')
-    console.log(columnId)
     const target = event.target as HTMLElement;
     const width = target.style.width;
     if (width) {
