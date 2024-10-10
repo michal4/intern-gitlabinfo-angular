@@ -25,17 +25,10 @@ export class ResizableDirective implements OnInit {
       tap(e => e.preventDefault()),
       switchMap(() => {
         const thElement = this.elementRef.nativeElement.closest("th");
-
-
-        const columnId = thElement?.getAttribute('id');
-        console.log('id ' + columnId)
-
         if (!thElement) {
           throw new Error("The closest <th> element is not found.");
         }
-
         const {width, right} = thElement.getBoundingClientRect();
-
         return fromEvent<MouseEvent>(this.documentRef, "mousemove").pipe(
           map(({clientX}) => width + clientX - right),
           distinctUntilChanged(),
