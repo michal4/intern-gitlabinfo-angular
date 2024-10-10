@@ -12,10 +12,27 @@ export class DisplayTextUtils {
       return text;
     }
 
-    const searchValue = this.cookieService.getCookie(columnId);
+    let searchValue = this.cookieService.getCookie(columnId);
     const commonFilter = this.cookieService.getCookie('commonFilter');
     if (!searchValue && !commonFilter) {
       return text;
+    }
+    if (searchValue && commonFilter) {
+      const commonPart = this.getCommonSubstring(commonFilter ?? '', searchValue, text);
+      if (!useRegex) {
+        if (commonPart) {
+          const booleans: boolean[] = Array.from(text).map(char => {
+            return commonFilter.includes(char) || searchValue.includes(char);
+          });
+          const substr =  this.getTrueSubstrings(text, booleans).toString();
+          const searchRegex = new RegExp(`(${substr.split(',').join('|')})`, 'gi');
+          return text.replace(searchRegex, `<mark style="background-color: yellow;">$1</mark>`);
+        } else {
+          const combinedPattern = `(${commonFilter}|${searchValue})`;
+          const searchRegex = new RegExp(combinedPattern, 'gi');
+          return text.replace(searchRegex, `<mark style="background-color: yellow;">$1</mark>`);
+        }
+      }
     }
 
     let highlightedText = text;
@@ -32,6 +49,7 @@ export class DisplayTextUtils {
         highlightedText = highlightedText.replace(searchRegex, `<mark style="background-color: yellow;">$1</mark>`);
       }
     }
+
     if (searchValue) {
       let searchRegex;
       if (useRegex) {
@@ -49,13 +67,68 @@ export class DisplayTextUtils {
     return highlightedText;
   }
 
+  getCommonSubstring(str1: string, str2: string, common: string): string | null {
+    const startIndex1 = common.indexOf(str1)
+    const endIndex1 = startIndex1 + str1.length;
+    const startIndex2 = common.indexOf(str2)
+    const endIndex2 = startIndex2 + str2.length;
+    const overlap = startIndex1 < endIndex2 && startIndex2 < endIndex1;
+    if (!overlap) {
+      return null;
+    }
+
+    let commonPart = '';
+    const getSubstrings = (str: string): string[] => {
+      const substrings: string[] = [];
+      const length = str.length;
+      for (let start = 0; start < length; start++) {
+        for (let end = start + 1; end <= length; end++) {
+          substrings.push(str.slice(start, end));
+        }
+      }
+      return substrings;
+    };
+    const substringsStr1 = getSubstrings(str1);
+    for (const substring of substringsStr1) {
+      if (str2.includes(substring) && common.includes(substring)) {
+        if (substring.length > commonPart.length) {
+          commonPart = substring;
+        }
+      }
+    }
+
+    return commonPart.length > 0 ? commonPart : null;
+  }
+
+  getTrueSubstrings(text: string, charArray: boolean[]): string[] {
+    const substrings: string[] = [];
+    let currentSubstring: string = "";
+
+    for (let i = 0; i < charArray.length; i++) {
+      if (charArray[i]) {
+        currentSubstring += text[i];
+      } else {
+        if (currentSubstring) {
+          substrings.push(currentSubstring);
+          currentSubstring = "";
+        }
+      }
+    }
+
+    if (currentSubstring) {
+      substrings.push(currentSubstring);
+    }
+
+    return substrings;
+  }
+
   highlightError(error: ModelError) {
     const selectedErrosPlain = this.cookieService.getCookie(ColumnId.ERRORS);
     if (!selectedErrosPlain) {
       return error.code;
     }
     const selectedErros = selectedErrosPlain.split(',');
-    if(selectedErros.includes(error.code)) {
+    if (selectedErros.includes(error.code)) {
       return `<mark style="background-color: yellow;">${error.code}</mark>`;
     }
     return error.code;
