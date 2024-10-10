@@ -3,10 +3,9 @@ import {Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
   BranchesService,
-  GitLabProject,
-  GitLabProjectsService,
+  GetGitLabProjects200Response,
   GitLabProjectService,
-  GetGitLabProjects200Response
+  GitLabProjectsService
 } from 'intern-gitlabinfo-openapi-angular';
 
 @Injectable({
@@ -24,11 +23,12 @@ export class ProjectService {
 
   // todo change to Branch
   getBranches(): Observable<any[]> {
+
     return this.branchesService.getBranches();
   }
 
   getProjectById(id: number): Observable<any> {
     return this.gitLabProjectService.getGitLabProjectById(id);
   }
-  
+
 }

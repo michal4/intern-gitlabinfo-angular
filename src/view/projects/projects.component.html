@@ -62,7 +62,7 @@
       {{ getPaginationStartIndex() }} - {{ getPaginationEndIndex() }} of {{ getTotalItems() }}
     </span>
       <button class="btn btn-light"
-              [disabled]="currentPage === totalPages"
+              [disabled]="currentPage === getTotalPages()"
               (click)="changePage(+1)">
         <mat-icon aria-hidden="false"
                   aria-label="Pagination right btn"
@@ -113,7 +113,7 @@
 
 <table mat-table [dataSource]="paginatedData">
   <ng-container *ngFor="let column of selectedColumns;" [matColumnDef]="column.id">
-    <th mat-header-cell *matHeaderCellDef resizable [id]="column.id">
+    <th mat-header-cell *matHeaderCellDef resizable [id]="'p_' + column.id">
       <div class="table-header-cell">
         <!--  select errors  -->
         <ng-container *ngIf="column.id === 'errors'">
@@ -182,9 +182,15 @@
       </div>
     </th>
 
-    <ng-container *ngIf="column.id !== 'errors'">
+    <ng-container *ngIf="column.id === 'name'">
       <td mat-cell *matCellDef="let row">
-        <span [innerHTML]="highlightText(getRowValue(row, column.id), column.id)"></span>
+        <a [href]="row.url">{{ row.name }}</a>
+      </td>
+    </ng-container>
+
+    <ng-container *ngIf="column.id !== 'errors' && column.id !== 'name'">
+      <td mat-cell *matCellDef="let row">
+        <span [innerHTML]="highlightText(getProjectRowValue(row, column.id), column.id)"></span>
       </td>
     </ng-container>
 
@@ -197,7 +203,6 @@
       </span>
       </td>
     </ng-container>
-
   </ng-container>
 
   <!-- actions column -->

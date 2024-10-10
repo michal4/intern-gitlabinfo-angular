@@ -19,7 +19,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatDividerModule} from '@angular/material/divider'; // <-- Add MatDividerModule
 import {Router} from '@angular/router';
-import {Column, ColumnId, columnSettings} from '../../model/columns';
+import {Column, ProjectColumnId, columnSettings} from '../../model/project-columns';
 import {Error} from '../../model/errors';
 import {DisplayTextUtils} from '../../util/displayTextUtils';
 import {archivedSelectSettings, ArchivedType, Filter} from '../../model/filters';
@@ -39,6 +39,7 @@ export const ARCHIVED = 'archived';
 export const COMMON_FILTER = 'commonFilter';
 export const COLUMNS = 'columns';
 export const ALL = 'All';
+export const PREFIX_COOKIE = 'p_';
 
 
 @Component({
@@ -187,24 +188,24 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   setInitialValues() {
     // current page number
-    this.currentPage = Number(this.cookieService.getCookie("page")) || 1;
+    this.currentPage = Number(this.cookieService.getCookie(this.valueWithPrefix("page"))) || 1;
 
     // columns
-    const selectedColumns = this.cookieService.getCookie(COLUMNS);
+    const selectedColumns = this.cookieService.getCookie(this.valueWithPrefix(COLUMNS));
     if (selectedColumns) {
       const selectedColumnIds = selectedColumns.split(",");
       this.columns.forEach(column => {
         column.selected = selectedColumnIds.includes(column.id);
       });
       const allSelected = this.getSelectedColumns().length;
-      let all = this.columns.filter(c => c.id === ColumnId.ALL)[0];
+      let all = this.columns.filter(c => c.id === ProjectColumnId.ALL)[0];
       all.selected = allSelected - 1 === this.columns.length;
       this.selectedColumnIds = this.columns.filter(c => c.selected).map(c => c.id);
     }
 
     // sorting
-    this.sortColumn = this.cookieService.getCookie('sortBy') || '';
-    this.sortDirection = (this.cookieService.getCookie('sortDest') as 'asc' | 'desc') || DEFAULT_SORT_ORDER;
+    this.sortColumn = this.cookieService.getCookie(this.valueWithPrefix('sortBy')) || '';
+    this.sortDirection = (this.cookieService.getCookie(this.valueWithPrefix('sortDest')) as 'asc' | 'desc') || DEFAULT_SORT_ORDER;
     const sortState: Sort = {active: this.sortColumn, direction: this.sortDirection};
     if (this.sort) {
       this.sort.active = sortState.active;
@@ -213,15 +214,19 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
 
     // use regex
-    this.useRegex = this.cookieService.getCookie('userRegex') === 'true' || false;
+    this.useRegex = this.cookieService.getCookie(this.valueWithPrefix('userRegex')) === 'true' || false;
 
     // archived types
     this.setPossibleArchived();
   }
 
+  valueWithPrefix(value: string) {
+    return PREFIX_COOKIE + value;
+  }
+
   updateCookie() {
     if (this.currentPage !== undefined && this.currentPage !== null) {
-      this.cookieService.setCookie("page", this.currentPage.toString());
+      this.cookieService.setCookie(this.valueWithPrefix("page"), this.currentPage.toString());
     }
     if (this.itemsPerPage !== undefined && this.itemsPerPage !== null) {
       let number = this.itemsPerPage.toString();
@@ -231,12 +236,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       if (this.selectedItemsPerPageOption === 'all') {
         number = this.selectedItemsPerPageOption;
       }
-      this.cookieService.setCookie("size", number);
+      this.cookieService.setCookie(this.valueWithPrefix("size"), number);
     }
     if (this.sortDirection !== undefined && this.sortDirection !== null) {
-      this.cookieService.setCookie("sortDest", this.sortDirection.toString());
+      this.cookieService.setCookie(this.valueWithPrefix("sortDest"), this.sortDirection.toString());
     }
-    this.cookieService.setCookie("sortBy", this.sortColumn || '');
+    this.cookieService.setCookie(this.valueWithPrefix("sortBy"), this.sortColumn || '');
 
     // selected columns
     let selectedColumnIds = this.columns
@@ -245,29 +250,29 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (selectedColumnIds.length === 0) {
       selectedColumnIds = '';
     }
-    this.cookieService.setCookie(COLUMNS, selectedColumnIds);
+    this.cookieService.setCookie(this.valueWithPrefix(COLUMNS), selectedColumnIds);
 
     // selected kinds
     const selectedKinds = this.kinds
       .filter(kind => kind.selected)
       .map(kind => kind.name).join(",");
-    this.cookieService.setCookie(ColumnId.KINDS, selectedKinds.length ? selectedKinds : '');
+    this.cookieService.setCookie(this.valueWithPrefix(ProjectColumnId.KINDS), selectedKinds.length ? selectedKinds : '');
 
     // selected errors
     const selectedErrors = this.errors
       .filter(error => error.selected)
       .map(error => error.code).join(",");
-    this.cookieService.setCookie(ColumnId.ERRORS, selectedErrors.length ? selectedErrors : '');
+    this.cookieService.setCookie(this.valueWithPrefix(ProjectColumnId.ERRORS), selectedErrors.length ? selectedErrors : '');
 
     // archived types
     const selectedArchivedTypes = this.archivedTypes
       .filter(type => type.selected)
       .map(type => type.name).join(",");
-    this.cookieService.setCookie(ARCHIVED, selectedArchivedTypes.length ? selectedArchivedTypes : '');
+    this.cookieService.setCookie(this.valueWithPrefix(ARCHIVED), selectedArchivedTypes.length ? selectedArchivedTypes : '');
   }
 
   setKinds() {
-    const cookiedKinds = this.cookieService.getCookie(ColumnId.KINDS);
+    const cookiedKinds = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.KINDS));
     let kindsSet = new Set(this.projects.map(project => project.kind));
     kindsSet.add(ALL);
     for (const kind of kindsSet) {
@@ -307,7 +312,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     });
     errorMap.set(ALL, 'All errors');
 
-    const cookiedErrors = this.cookieService.getCookie(ColumnId.ERRORS)?.split(',') || [];
+    const cookiedErrors = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.ERRORS))?.split(',') || [];
     for (const [code, message] of errorMap) {
       const possibleError: Error = {
         code: code,
@@ -324,7 +329,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   setPossibleArchived() {
-    const cookiedArhived = this.cookieService.getCookie(ARCHIVED)?.split(',') || [];
+    const cookiedArhived = this.cookieService.getCookie(this.valueWithPrefix(ARCHIVED))?.split(',') || [];
     for (let i = 0; i < this.archivedTypes.length; i++) {
       const archived = this.archivedTypes[i];
       this.archivedTypes[i].selected = cookiedArhived.includes(archived.name);
@@ -338,7 +343,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   setPageSize() {
-    const itemsPerPageCookie = this.cookieService.getCookie("size");
+    const itemsPerPageCookie = this.cookieService.getCookie(this.valueWithPrefix("size"));
     if (itemsPerPageCookie) {
       if (itemsPerPageCookie === 'all') {
         this.selectedItemsPerPageOption = itemsPerPageCookie;
@@ -382,11 +387,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getWidthFromCookie(columnId: string): number | null {
-    const cookieValue = this.cookieService.getCookie(`${columnId}_width`);
+    const cookieValue = this.cookieService.getCookie(`${PREFIX_COOKIE}${columnId}_width`);
     return cookieValue ? parseInt(cookieValue, 10) : null;
   }
 
-  get totalPages() {
+  getTotalPages() {
     return this.itemsPerPage === 'all'
       ? 1
       : Math.ceil(this.filteredData.length / (this.itemsPerPage as number));
@@ -400,16 +405,16 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const column = this.columns.find(col => col.id === columnId);
     if (column) {
       column.selected = !column.selected;
-      if (column.id === ColumnId.ALL) {
+      if (column.id === ProjectColumnId.ALL) {
         this.columns.every(e => e.selected = column.selected);
         this.columnsForm.setValue(column.selected ? this.columns : []);
       } else {
         const allSelected = this.columns
-          .filter(t => t.id !== ColumnId.ALL)
+          .filter(t => t.id !== ProjectColumnId.ALL)
           .map(t => t.selected);
         const areAllSelectedSame = new Set(allSelected).size === 1;
         let all = this.columns
-          .filter(t => t.id === ColumnId.ALL)[0];
+          .filter(t => t.id === ProjectColumnId.ALL)[0];
         if (areAllSelectedSame) {
           all.selected = allSelected[0];
         } else {
@@ -529,7 +534,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   changePage(increment: number) {
     this.currentPage = this.currentPage ?? 1;
     const newPage = this.currentPage + increment;
-    if (newPage > 0 && newPage <= this.totalPages) {
+    if (newPage > 0 && newPage <= this.getTotalPages()) {
       this.currentPage = newPage;
       this.currentPageSubject.next(this.currentPage);
       this.updatePaginatedData();
@@ -544,10 +549,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.sortColumnSubject.next(this.sortColumn);
         this.sortOrderSubject.next(this.sortDirection);
 
-        if (columnId !== ColumnId.ERRORS) {
+        if (columnId !== ProjectColumnId.ERRORS) {
           this.filteredData.sort((a, b) => {
-            const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
-            const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
+            const valueA = this.getProjectRowValue(a, columnId)?.toString().toLowerCase() ?? '';
+            const valueB = this.getProjectRowValue(b, columnId)?.toString().toLowerCase() ?? '';
             return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
           });
         } else {
@@ -581,7 +586,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
     if (startIndex > endIndex) {
       startIndex = endIndex - this.itemsPerPage;
-      this.currentPage = this.totalPages
+      this.currentPage = this.getTotalPages()
     }
     if (startIndex < 1) {
       startIndex = 0;
@@ -589,8 +594,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.paginatedData = this.filteredData.slice(startIndex, endIndex);
   }
 
-  getRowValue(project: GitLabProject, columnId: string): string {
-    return this.displayTextUtils.getRowValue(project, columnId);
+  getProjectRowValue(project: GitLabProject, columnId: string): string {
+    return this.displayTextUtils.getProjectRowValue(project, columnId);
   }
 
   getErrorValues(project: GitLabProject): ModelError[] {
@@ -618,13 +623,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   applyFilters() {
-    const nameFilter = this.cookieService.getCookie(ColumnId.NAME) || '';
-    const defaultBranchFilter = this.cookieService.getCookie(ColumnId.DEFAULT_BRANCH) || '';
-    const parentArtifactIdFilter = this.cookieService.getCookie(ColumnId.PARENT_ARTIFACT_ID) || '';
-    const parentVersionFilter = this.cookieService.getCookie(ColumnId.PARENT_VERSION) || '';
-    const descriptionFilter = this.cookieService.getCookie(ColumnId.DESCRIPTION) || '';
-    const commonFilter = this.cookieService.getCookie(COMMON_FILTER) || '';
-    const useRegex = this.cookieService.getCookie('useRegex') === 'true';
+    const nameFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.NAME)) || '';
+    const defaultBranchFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.DEFAULT_BRANCH)) || '';
+    const parentArtifactIdFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.PARENT_ARTIFACT_ID)) || '';
+    const parentVersionFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.PARENT_VERSION)) || '';
+    const descriptionFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.DESCRIPTION)) || '';
+    const commonFilter = this.cookieService.getCookie(this.valueWithPrefix(COMMON_FILTER)) || '';
+    const useRegex = this.cookieService.getCookie(this.valueWithPrefix('useRegex')) === 'true';
     const selectedKinds = this.getSelectedKinds();
     let selectedErrors = this.getSelectedErrors();
     const selectedArchived = this.getSelectedArchived();
@@ -674,8 +679,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       );
     });
     // sort
-    const sortBy = this.cookieService.getCookie('sortBy');
-    const sortDest = this.cookieService.getCookie('sortDest');
+    const sortBy = this.cookieService.getCookie(this.valueWithPrefix('sortBy'));
+    const sortDest = this.cookieService.getCookie(this.valueWithPrefix('sortDest'));
     this.sortData(sortBy, sortDest);
   }
 
@@ -754,7 +759,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (this.columnsForm.value === null) {
       return [];
     }
-    return this.columnsForm.value.filter((c: Column) => c.selected && c.id !== ColumnId.ALL);
+    return this.columnsForm.value.filter((c: Column) => c.selected && c.id !== ProjectColumnId.ALL);
   }
 
   getSelectedArchived() {
@@ -762,11 +767,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     if (types == null) {
       return [];
     }
-    return this.archivedForm.value.filter((c: Filter) => c.selected && c.name !== ColumnId.ALL);
+    return this.archivedForm.value.filter((c: Filter) => c.selected && c.name !== ProjectColumnId.ALL);
   }
 
   getSelectedArchivedName() {
-    const savedArchivedTypes = this.cookieService.getCookie(ARCHIVED)?.split(',') ?? [];
+    const savedArchivedTypes = this.cookieService.getCookie(this.valueWithPrefix(ARCHIVED))?.split(',') ?? [];
     const archiveTypes = [ArchivedType.ALL, ArchivedType.LIVE, ArchivedType.ARCHIVED];
     return archiveTypes.find(type => savedArchivedTypes.includes(type)) || '';
   }
@@ -780,7 +785,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getSelectedKindsName() {
-    const saved = this.cookieService.getCookie(ColumnId.KINDS)?.split(',') ?? [];
+    const saved = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.KINDS))?.split(',') ?? [];
     if (saved.includes(ALL)) {
       return ALL;
     }
@@ -796,7 +801,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getSelectedErrorCodes() {
-    const saved = this.cookieService.getCookie(ColumnId.ERRORS)?.split(',') ?? [];
+    const saved = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.ERRORS))?.split(',') ?? [];
     if (saved.includes(ALL)) {
       return ALL;
     }
@@ -814,7 +819,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getValueFromCookie(columnId: string) {
-    return this.cookieService.getCookie(columnId);
+    return this.cookieService.getCookie(this.valueWithPrefix(columnId));
   }
 
   getPageSize() {
@@ -858,24 +863,24 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   filterValue(id: string, $event: Event): void {
     let element = $event.target as HTMLInputElement;
-    this.cookieService.setCookie(id, element.value);
+    this.cookieService.setCookie(this.valueWithPrefix(id), element.value);
     this.applyFilters();
   }
 
   useRegexChange(event: MatCheckboxChange) {
     this.useRegex = event.checked;
     this.useRegexSubject.next(this.useRegex);
-    this.cookieService.setCookie("useRegex", this.useRegex);
+    this.cookieService.setCookie(this.valueWithPrefix("useRegex"), this.useRegex);
     this.applyFilters();
   }
 
   getUseRegex(): boolean {
-    const useRegexFromCookie = this.getValueFromCookie('useRegex');
+    const useRegexFromCookie = this.getValueFromCookie(this.valueWithPrefix('useRegex'));
     return useRegexFromCookie === 'true' ? true : false;
   }
 
   saveToCookie(key: any, value: string): void {
-    this.cookieService.setCookie(key, value)
+    this.cookieService.setCookie(this.valueWithPrefix(key), value)
     this.applyFilters()
   }
 
@@ -885,7 +890,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   highlightText(rowValue: string, id: any) {
-    return this.displayTextUtils.highlight(rowValue, id, this.useRegex);
+    return this.displayTextUtils.highlight(PREFIX_COOKIE, rowValue, id, this.useRegex);
   }
 
   higlightError(error: ModelError) {
@@ -905,11 +910,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  onColumnResize(event: Event, columnId: ColumnId) {
-    const target = event.target as HTMLElement;
-    const width = target.style.width;
-    if (width) {
-      this.saveToCookie(columnId + '_width', width);
-    }
-  }
+  // onColumnResize(event: Event, columnId: ProjectColumnId) {
+  //   const target = event.target as HTMLElement;
+  //   const width = target.style.width;
+  //   if (width) {
+  //     this.saveToCookie(PREFIX_COOKIE + columnId + '_width', width);
+  //   }
+  // }
 }

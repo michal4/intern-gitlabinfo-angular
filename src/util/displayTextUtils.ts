@@ -1,5 +1,6 @@
-import {GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
-import {ColumnId} from '../model/columns';
+import {Branch, GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
+import {ProjectColumnId} from '../model/project-columns';
+import {BranchColumnId} from '../model/branch-column';
 import {CookieService} from '../service/cookie.service';
 
 export class DisplayTextUtils {
@@ -7,13 +8,13 @@ export class DisplayTextUtils {
   constructor(private cookieService: CookieService) {
   }
 
-  highlight(text: string, columnId: string, useRegex: boolean): string {
-    if (text === '' || columnId === ColumnId.KINDS) {
+  highlight(cookiePrefix: string, text: string, columnId: string, useRegex: boolean): string {
+    if (text === '' || columnId === ProjectColumnId.KINDS) {
       return text;
     }
 
-    let searchValue = this.cookieService.getCookie(columnId);
-    const commonFilter = this.cookieService.getCookie('commonFilter');
+    let searchValue = this.cookieService.getCookie(cookiePrefix + columnId);
+    const commonFilter = this.cookieService.getCookie(cookiePrefix + 'commonFilter');
     if (!searchValue && !commonFilter) {
       return text;
     }
@@ -24,7 +25,7 @@ export class DisplayTextUtils {
           const booleans: boolean[] = Array.from(text).map(char => {
             return commonFilter.includes(char) || searchValue.includes(char);
           });
-          const substr =  this.getTrueSubstrings(text, booleans).toString();
+          const substr = this.getTrueSubstrings(text, booleans).toString();
           const searchRegex = new RegExp(`(${substr.split(',').join('|')})`, 'gi');
           return text.replace(searchRegex, `<mark style="background-color: yellow;">$1</mark>`);
         } else {
@@ -123,7 +124,7 @@ export class DisplayTextUtils {
   }
 
   highlightError(error: ModelError) {
-    const selectedErrosPlain = this.cookieService.getCookie(ColumnId.ERRORS);
+    const selectedErrosPlain = this.cookieService.getCookie(ProjectColumnId.ERRORS);
     if (!selectedErrosPlain) {
       return error.code;
     }
@@ -134,15 +135,26 @@ export class DisplayTextUtils {
     return error.code;
   }
 
-  getRowValue(project: GitLabProject, columnId: string): string {
+  getBranchRowValue(branch: Branch, columnId: string): string {
     switch (columnId) {
-      case ColumnId.DEFAULT_BRANCH:
+      case BranchColumnId.PROJECT:
+        return branch.projectName ?? '';
+      case BranchColumnId.LAST_COMMIT_DATETIME:
+        return 'todo';
+      default:
+        return branch[columnId as keyof Branch]?.toString() ?? '';
+    }
+  }
+
+  getProjectRowValue(project: GitLabProject, columnId: string): string {
+    switch (columnId) {
+      case ProjectColumnId.DEFAULT_BRANCH:
         return project.defaultBranch?.name ?? '';
-      case ColumnId.PARENT_ARTIFACT_ID:
+      case ProjectColumnId.PARENT_ARTIFACT_ID:
         return project.defaultBranch?.parent?.artifactId ?? '';
-      case ColumnId.PARENT_VERSION:
+      case ProjectColumnId.PARENT_VERSION:
         return project.defaultBranch?.parent?.version ?? '';
-      case ColumnId.KINDS:
+      case ProjectColumnId.KINDS:
         return project.kind;
       default:
         return project[columnId as keyof GitLabProject]?.toString() ?? '';
