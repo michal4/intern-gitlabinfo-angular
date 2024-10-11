@@ -184,7 +184,7 @@
 
     <ng-container *ngIf="column.id === 'name'">
       <td mat-cell *matCellDef="let row">
-        <a [href]="row.url">{{ row.name }}</a>
+        <a [href]="row.url" [matTooltip]="row.url">{{ row.name }}</a>
       </td>
     </ng-container>
 
@@ -196,13 +196,14 @@
 
     <ng-container *ngIf="column.id === 'errors'">
       <td mat-cell *matCellDef="let row">
-        <span *ngFor="let error of getErrorValues(row)"
-              [matTooltip]="error.message"
-              matTooltipPosition="above"
-              [innerHTML]="higlightError(error)">
-      </span>
+    <span *ngFor="let error of getErrorValues(row); let last = last"
+          [matTooltip]="error.message"
+          matTooltipPosition="above"
+          [innerHTML]="higlightError(error) + (!last ? ',' : '')">
+    </span>
       </td>
     </ng-container>
+
   </ng-container>
 
   <!-- actions column -->
@@ -213,13 +214,13 @@
     <td mat-cell *matCellDef="let row">
       <mat-icon aria-hidden="false"
                 aria-label="view info about project"
-                matTooltip="View details"
+                matTooltip="details"
                 fontIcon="info"
                 (click)="goToGitLabProjectDetails(row)">
       </mat-icon>
       <mat-icon aria-hidden="false"
                 aria-label="view branches"
-                matTooltip="View branches"
+                matTooltip="branches"
                 fontIcon="polyline"
                 (click)="goToBranches(row)">
       </mat-icon>

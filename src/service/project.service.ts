@@ -23,7 +23,6 @@ export class ProjectService {
 
   // todo change to Branch
   getBranches(): Observable<any[]> {
-
     return this.branchesService.getBranches();
   }
 

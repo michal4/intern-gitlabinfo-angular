@@ -116,28 +116,55 @@
           </mat-form-field>
         </ng-container>
 
-        <!--  select jdk  -->
-        <!--        <ng-container *ngIf="column.id === 'jdks'">-->
-        <!--          <mat-form-field class="drop-down-selection">-->
-        <!--            <mat-label>Errors</mat-label>-->
-        <!--            <mat-select [formControl]="jdkForm" multiple>-->
+        <!-- select jdk -->
+        <ng-container *ngIf="column.id === 'jdks'">
+          <mat-form-field class="drop-down-selection">
+            <mat-label>JDK</mat-label>
+            <mat-select [formControl]="errorForm" multiple>
+              <mat-select-trigger>
+                {{ getSelectedErrors() }}
+              </mat-select-trigger>
 
-        <!--              <mat-select-trigger>-->
-        <!--                {{ getSelectedJDKs() }}-->
-        <!--              </mat-select-trigger>-->
+              <mat-option *ngFor="let jdk of errors"
+                          [value]="jdk"
+                          (click)="toggleErrorSelection(jdk.code)">
+                {{ jdk.code }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
 
-        <!--              <mat-option *ngFor="let jdk of jdks"-->
-        <!--                          [value]="jdk"-->
-        <!--                          (click)="toggleJDK(jdk.name)">-->
-        <!--                {{ jdk.name }}-->
-        <!--              </mat-option>-->
-        <!--            </mat-select>-->
-        <!--          </mat-form-field>-->
-        <!--        </ng-container>-->
+        <!-- last commit at in days-->
+        <ng-container *ngIf="column.id === 'lastCommitCreatedAt'">
+          <!-- Min last activity days -->
+          <mat-form-field>
+            <mat-label>Last activity from</mat-label>
+            <input #minInputField matInput
+                   placeholder="Last activity from"
+                   min="0"
+                   type="number"
+                   [(ngModel)]="lastCommitedAtFrom"
+                   (keyup)="saveToCookie(column.id.concat('_from'), lastCommitedAtFrom.toString())"
+                   [value]="getValueFromCookie(column.id.concat('_from'))">
+          </mat-form-field>
 
+          <hr/>
+
+          <!-- Max last activity days -->
+          <mat-form-field>
+            <mat-label>Last activity to</mat-label>
+            <input #maxInputField matInput
+                   placeholder="Last activity to"
+                   min="0"
+                   type="number"
+                   [(ngModel)]="lastCommitedAtTo"
+                   (keyup)="saveToCookie(column.id.concat('_to'), lastCommitedAtTo !== null ? lastCommitedAtTo.toString() : '')"
+                   [value]="getValueFromCookie(column.id.concat('_to'))">
+          </mat-form-field>
+        </ng-container>
 
         <!-- any -->
-        <ng-container *ngIf="column.id !== 'errors'">
+        <ng-container *ngIf="column.id !== 'errors' && column.id !== 'lastCommitCreatedAt' && column.id !== 'jdks'">
           <mat-form-field>
             <mat-label>{{ column.label }}</mat-label>
             <input #inputField matInput [placeholder]="column.label"
@@ -146,7 +173,7 @@
           </mat-form-field>
         </ng-container>
 
-        <!--sort-->
+        <!-- sort -->
         <div class="header-sort">
           <mat-icon aria-hidden="false"
                     aria-label="sort up btn"
@@ -166,26 +193,33 @@
 
     <ng-container *ngIf="column.id === 'projectName'">
       <td mat-cell *matCellDef="let row">
-        <a [href]="">{{ getName(row) }}</a>
+        <a [href]="getProjectUrl(row)" [matTooltip]="getProjectUrl(row)">{{ row.projectName }}</a>
       </td>
     </ng-container>
 
-    <ng-container *ngIf="column.id !== 'errors' && column.id !== 'projectName'">
+    <ng-container *ngIf="column.id === 'name'">
+      <td mat-cell *matCellDef="let row">
+        <a [href]="row.url" [matTooltip]="row.url">{{ row.name }}</a>
+      </td>
+    </ng-container>
+
+    <ng-container *ngIf="column.id === 'errors'">
+      <td mat-cell *matCellDef="let row">
+    <span *ngFor="let error of getErrorValues(row); let last = last"
+          [matTooltip]="error.message"
+          matTooltipPosition="above"
+          [innerHTML]="higlightError(error) + (!last ? ',' : '')">
+    </span>
+      </td>
+    </ng-container>
+
+    <ng-container *ngIf="column.id !== 'errors' && column.id !== 'projectName' && column.id !== 'name'">
       <td mat-cell *matCellDef="let row">
         <!--        <span [innerHTML]="highlightText(getRowValue(row, column.id), column.id)"></span>-->
         {{ getRowValue(row, column.id) }}
       </td>
     </ng-container>
 
-    <ng-container *ngIf="column.id === 'errors'">
-      <td mat-cell *matCellDef="let row">
-        <span *ngFor="let error of getErrorValues(row)"
-              [matTooltip]="error.message"
-              matTooltipPosition="above"
-              [innerHTML]="higlightError(error)">
-      </span>
-      </td>
-    </ng-container>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="selectedColumnIds"></tr>

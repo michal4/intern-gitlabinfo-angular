@@ -123,8 +123,8 @@ export class DisplayTextUtils {
     return substrings;
   }
 
-  highlightError(error: ModelError) {
-    const selectedErrosPlain = this.cookieService.getCookie(ProjectColumnId.ERRORS);
+  highlightError(cookiePrefix: string, error: ModelError) {
+    const selectedErrosPlain = this.cookieService.getCookie(cookiePrefix.concat(ProjectColumnId.ERRORS));
     if (!selectedErrosPlain) {
       return error.code;
     }
@@ -140,7 +140,7 @@ export class DisplayTextUtils {
       case BranchColumnId.PROJECT:
         return branch.projectName ?? '';
       case BranchColumnId.LAST_COMMIT_DATETIME:
-        return 'todo';
+        return getDays(branch.lastCommitCreatedAt).toString();
       default:
         return branch[columnId as keyof Branch]?.toString() ?? '';
     }
@@ -161,17 +161,24 @@ export class DisplayTextUtils {
     }
   }
 
-  getErrors(row: GitLabProject) {
-    const projectErrors = this.formatErrors(row.errors || []);
-    const branchErrors = this.formatErrors(row.defaultBranch?.errors || []);
-    if (projectErrors.length === 0) {
-      return branchErrors.length > 0 ? branchErrors.concat(', ') : '';
+  getErrors(row: any) {
+    const parentErrors = this.formatErrors(row.errors || []);
+    const childrenErrors = this.formatErrors(row.defaultBranch?.errors || []);
+    if (parentErrors.length === 0) {
+      return childrenErrors.length > 0 ? childrenErrors.concat(', ') : '';
     }
-    return [projectErrors, branchErrors].join(', ') || '';
+    return [parentErrors, childrenErrors].join(', ') || '';
   }
 
   formatErrors(errors: any[]): string {
     return Array.isArray(errors) ? errors.map(e => e.code).join(', ') : '';
   }
 
+}
+
+export function getDays(lastCommitCreatedAt: string): number {
+  const lastCommitDate = new Date(lastCommitCreatedAt);
+  const currentDate = new Date();
+  const differenceInMillis = currentDate.getTime() - lastCommitDate.getTime();
+  return Math.floor(differenceInMillis / (1000 * 60 * 60 * 24));
 }

@@ -310,6 +310,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         });
       }
     });
+    console.log(this.projects)
+
     errorMap.set(ALL, 'All errors');
 
     const cookiedErrors = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.ERRORS))?.split(',') || [];
@@ -894,7 +896,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   higlightError(error: ModelError) {
-    return this.displayTextUtils.highlightError(error)
+    return this.displayTextUtils.highlightError(PREFIX_COOKIE, error)
   }
 
   goToGitLabProjectDetails(project: GitLabProject): void {

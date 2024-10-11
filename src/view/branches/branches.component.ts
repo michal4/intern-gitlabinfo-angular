@@ -1,7 +1,7 @@
 import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {DatePipe, NgClass, NgForOf, NgIf} from "@angular/common";
 import {FormControl, FormsModule, ReactiveFormsModule} from "@angular/forms";
-import {Branch, GitLabProject, ModelError} from 'intern-gitlabinfo-openapi-angular';
+import {Branch, ModelError} from 'intern-gitlabinfo-openapi-angular';
 import {ProjectService} from '../../service/project.service';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from '../../service/cookie.service';
@@ -18,10 +18,9 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatDividerModule} from '@angular/material/divider'; // <-- Add MatDividerModule
-import {Router} from '@angular/router';
 import {BranchColumnId, Column, columnSettings} from '../../model/branch-column';
 import {Error} from '../../model/errors';
-import {DisplayTextUtils} from '../../util/displayTextUtils';
+import {DisplayTextUtils, getDays} from '../../util/displayTextUtils';
 import {Filter} from '../../model/filters';
 import {ResizableModule} from '../../components/resizable/resizable.module';
 
@@ -124,15 +123,20 @@ export class BranchesComponent implements OnInit, OnDestroy {
   private columnSubjects: { [key: string]: Subject<void> } = {};
   private errorSubjects: { [key: string]: Subject<void> } = {};
 
+  lastCommitedAtFrom: number;
+  lastCommitedAtTo: number;
+  maxLastCommitedAtTo: number = Number.MAX_SAFE_INTEGER;
+
   @ViewChild(MatSort) sort: MatSort | undefined;
 
   displayTextUtils: DisplayTextUtils;
 
   constructor(private projectService: ProjectService,
-              private cookieService: CookieService,
-              private router: Router
+              private cookieService: CookieService
   ) {
     this.displayTextUtils = new DisplayTextUtils(this.cookieService);
+    this.lastCommitedAtFrom = Number(this.getValueFromCookie(BranchColumnId.LAST_COMMIT_DATETIME.concat('_from'))) || 0;
+    this.lastCommitedAtTo = Number(this.getValueFromCookie(BranchColumnId.LAST_COMMIT_DATETIME.concat('_to'))) || 0;
   }
 
   ngOnInit() {
@@ -164,12 +168,20 @@ export class BranchesComponent implements OnInit, OnDestroy {
       (data: Branch[]) => {
         this.branches = data ?? [];
         this.filteredData = [...this.branches];
+        this.setMaxLastCommetedAt();
         this.setErrors();
         this.setPageSize();
         this.applyColumnWidths();
         this.applyFilters();
       }
     );
+  }
+
+  setMaxLastCommetedAt() {
+    const dates = this.branches.map(b => new Date(b.lastCommitCreatedAt));
+    const oldestDate = new Date(Math.min(...dates.map(date => date.getTime())));
+    const daysBetween = getDays(oldestDate.toString());
+    this.maxLastCommitedAtTo = daysBetween;
   }
 
   setInitialValues() {
@@ -244,9 +256,9 @@ export class BranchesComponent implements OnInit, OnDestroy {
 
   setErrors() {
     const errorMap = new Map<string, string>(); // Key: error code, Value: error message
-    this.branches.forEach(project => {
-      if (Array.isArray(project.errors)) {
-        project.errors.forEach(error => {
+    this.branches.forEach(branch => {
+      if (Array.isArray(branch.errors)) {
+        branch.errors.forEach(error => {
           if (error.code && error.message) {
             errorMap.set(error.code, error.message);
           }
@@ -413,31 +425,31 @@ export class BranchesComponent implements OnInit, OnDestroy {
   }
 
   sortData(columnId: string | null, dist: string | null) {
-    // if (columnId !== null && dist !== null) {
-    //   if (columnId) {
-    //     this.sortColumn = columnId;
-    //     this.sortDirection = dist === 'asc' ? 'asc' : 'desc';
-    //     this.sortColumnSubject.next(this.sortColumn);
-    //     this.sortOrderSubject.next(this.sortDirection);
-    //
-    //     if (columnId !== BranchColumnId.ERRORS) {
-    //       this.filteredData.sort((a, b) => {
-    //         const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
-    //         const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
-    //         return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
-    //       });
-    //     } else {
-    //       this.filteredData.sort((a, b) => {
-    //         const errorsA = this.getErrorValues(a);
-    //         const errorsB = this.getErrorValues(b);
-    //         const codesA = errorsA.map(e => e.code).join('');
-    //         const codesB = errorsB.map(e => e.code).join('');
-    //         if (codesA.length === 0 && codesB.length === 0) return 0;
-    //         return (codesA > codesB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
-    //       });
-    //     }
-    //   }
-    // }
+    if (columnId !== null && dist !== null) {
+      if (columnId) {
+        this.sortColumn = columnId;
+        this.sortDirection = dist === 'asc' ? 'asc' : 'desc';
+        this.sortColumnSubject.next(this.sortColumn);
+        this.sortOrderSubject.next(this.sortDirection);
+
+        if (columnId !== BranchColumnId.ERRORS) {
+          this.filteredData.sort((a, b) => {
+            const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
+            const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
+            return (valueA > valueB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+          });
+        } else {
+          this.filteredData.sort((a, b) => {
+            const errorsA = this.getErrorValues(a);
+            const errorsB = this.getErrorValues(b);
+            const codesA = errorsA.map(e => e.code).join('');
+            const codesB = errorsB.map(e => e.code).join('');
+            if (codesA.length === 0 && codesB.length === 0) return 0;
+            return (codesA > codesB ? 1 : -1) * (dist === 'asc' ? 1 : -1);
+          });
+        }
+      }
+    }
     this.updatePaginatedData();
   }
 
@@ -474,115 +486,126 @@ export class BranchesComponent implements OnInit, OnDestroy {
   // }
 
   getErrorValues(branch: Branch): ModelError[] {
-    return [];
+    let errors: ModelError[] = branch.errors ?? [];
+    errors.sort((a, b) => a.code.localeCompare(b.code));
+    return errors;
   }
 
-  getErrors(project: GitLabProject): string {
-    return this.displayTextUtils.getErrors(project);
+  getErrors(branch: Branch): string {
+    return this.displayTextUtils.getErrors(branch);
   }
 
   applyFilters() {
-    // const nameFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.NAME)) || '';
-    // const defaultBranchFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.DEFAULT_BRANCH)) || '';
-    // const parentArtifactIdFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.PARENT_ARTIFACT_ID)) || '';
-    // const parentVersionFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.PARENT_VERSION)) || '';
-    // const descriptionFilter = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.DESCRIPTION)) || '';
-    // const commonFilter = this.cookieService.getCookie(this.valueWithPrefix(COMMON_FILTER)) || '';
-    // const useRegex = this.cookieService.getCookie(this.valueWithPrefix('useRegex')) === 'true';
-    // let selectedErrors = this.getSelectedErrors();
-    // const allErrors = selectedErrors.filter(e => e.code === ALL).length > 0;
-    //
-    // this.filteredData = this.branches.filter(branch => {
-    //   const matchesRegexOrIncludes = (value: string, filter: string) => {
-    //     if (useRegex) {
-    //       try {
-    //         const regex = new RegExp(filter, 'i');
-    //         return regex.test(value || '');
-    //       } catch (e) {
-    //         console.error('Invalid regex pattern: ', filter);
-    //         return false;
-    //       }
-    //     } else {
-    //       return value?.toLowerCase().includes(filter.toLowerCase()) || filter === '';
-    //     }
-    //   };
-    //
-    //   const matchesName = matchesRegexOrIncludes(branch.name, nameFilter);
-    //   const matchesDefaultBranch = matchesRegexOrIncludes(branch.defaultBranch?.name, defaultBranchFilter);
-    //   const matchesParentArtifactId = matchesRegexOrIncludes(branch.defaultBranch?.parent?.artifactId ?? '', parentArtifactIdFilter);
-    //   const matchesParentVersion = matchesRegexOrIncludes(project.defaultBranch?.parent?.version ?? '', parentVersionFilter);
-    //   const matchesDescription = matchesRegexOrIncludes(project.description ?? '', descriptionFilter);
-    //   const projectErrors = this.getErrors(project) ?? [];
-    //   let errors = projectErrors.split(',').filter(error => error.trim() !== '') ?? [];
-    //   const matchesErrors = allErrors || selectedErrors.length === 0 || this.isErrorsSelected(errors, selectedErrors);
-    //   const isArchived = project.archived;
-    //   const matchesArchived = allArchivedType || (mustBeLive && !isArchived || !mustBeLive && isArchived);
-    //   const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
-    //
-    //   return (
-    //     matchesName &&
-    //     matchesDefaultBranch &&
-    //     matchesParentArtifactId &&
-    //     matchesParentVersion &&
-    //     matchesDescription &&
-    //     matchesErrors &&
-    //     matchesArchived &&
-    //     matchesCommonFilter
-    //   );
-    // });
-    // sort
+    const projectFilter = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.PROJECT)) || '';
+    const nameFilter = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.BRANCH_NAME)) || '';
+    const artifactIdFilter = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.ARTIFACT_ID)) || '';
+    const groupIdFilter = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.GROUP_ID)) || '';
+    const lastActivityFilterFrom = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.LAST_COMMIT_DATETIME).concat('_from')) || null;
+    const lastActivityFilterTo = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.LAST_COMMIT_DATETIME).concat('_to')) || null;
+    const revisionFilter = this.cookieService.getCookie(this.valueWithPrefix(BranchColumnId.REVISION)) || '';
+    const commonFilter = this.cookieService.getCookie(this.valueWithPrefix(COMMON_FILTER)) || '';
+    const useRegex = this.cookieService.getCookie(this.valueWithPrefix('useRegex')) === 'true';
+    let selectedErrors = this.getSelectedErrors();
+    const allErrors = selectedErrors.filter(e => e.code === ALL).length > 0;
 
-    this.filteredData = this.branches;
+    this.filteredData = this.branches.filter(branch => {
+      const matchesRegexOrIncludes = (value: string, filter: string) => {
+        if (useRegex) {
+          try {
+            const regex = new RegExp(filter, 'i');
+            return regex.test(value || '');
+          } catch (e) {
+            console.error('Invalid regex pattern: ', filter);
+            return false;
+          }
+        } else {
+          return value?.toLowerCase().includes(filter.toLowerCase()) || filter === '';
+        }
+      };
 
+      const matchesProjectName = matchesRegexOrIncludes(branch.projectName, projectFilter);
+      const matchesName = matchesRegexOrIncludes(branch.name, nameFilter);
+      const matchesArtifactId = matchesRegexOrIncludes(branch.artifactId ?? '', artifactIdFilter);
+      const matchesGroupId = matchesRegexOrIncludes(branch.groupId ?? '', groupIdFilter);
+      const matchesLastActivity = this.numberInInterval(getDays(branch.lastCommitCreatedAt).toString(), lastActivityFilterFrom, lastActivityFilterTo);
+      const matchesRevision = matchesRegexOrIncludes(branch.revision ?? '', revisionFilter);
+      const branchErrors = this.getErrors(branch) ?? [];
+      let errors = branchErrors.split(',').filter(error => error.trim() !== '') ?? [];
+      const matchesErrors = allErrors || selectedErrors.length === 0 || this.isErrorsSelected(errors, selectedErrors);
+      const matchesCommonFilter = this.isCommonFilterMatched(branch, commonFilter.toLowerCase());
+
+      return (
+        matchesProjectName &&
+        matchesName &&
+        matchesArtifactId &&
+        matchesGroupId &&
+        matchesLastActivity &&
+        matchesRevision &&
+        matchesErrors &&
+        matchesCommonFilter
+      );
+    });
     const sortBy = this.cookieService.getCookie(this.valueWithPrefix('sortBy'));
     const sortDest = this.cookieService.getCookie(this.valueWithPrefix('sortDest'));
     this.sortData(sortBy, sortDest);
   }
 
-  isCommonFilterMatched(project: GitLabProject, commonFilter: string): boolean {
-    const propertiesToCheck: string[] = [
-      project.name,
-      project.url,
-      project.description ?? '',
-      project.cicd?.configurationFile ?? '',
-      this.getErrors(project)
-    ];
-    const checkMinProps = this.filter(propertiesToCheck, commonFilter);
-    if (checkMinProps) {
-      return checkMinProps;
-    }
+  numberInInterval(numberPlain: string, from: string | null, to: string | null) {
+    const min = from === null ? 0 : Number(from);
+    const max = to === null ? Number.MAX_SAFE_INTEGER : Number(to);
+    const num = Number(numberPlain);
+    return num >= min && num <= max;
+  }
 
-    const variables = project.cicd.variables;
-    for (const key in variables) {
-      if (variables.hasOwnProperty(key)) {
-        const keyIncl = key.toLowerCase().includes(commonFilter);
-        const valueIncl = variables[key].toLowerCase().includes(commonFilter);
-        if (keyIncl || valueIncl) {
-          return true;
-        }
-      }
-    }
+  isCommonFilterMatched(branch: Branch, commonFilter: string): boolean {
+    // const propertiesToCheck: string[] = [
+    //   branch.name,
+    //   branch.url,
+    //   branch.description ?? '',
+    //   branch.cicd?.configurationFile ?? '',
+    //   this.getErrors(project)
+    // ];
+    // const checkMinProps = this.filter(propertiesToCheck, commonFilter);
+    // if (checkMinProps) {
+    //   return checkMinProps;
+    // }
+    //
+    // const variables = project.cicd.variables;
+    // for (const key in variables) {
+    //   if (variables.hasOwnProperty(key)) {
+    //     const keyIncl = key.toLowerCase().includes(commonFilter);
+    //     const valueIncl = variables[key].toLowerCase().includes(commonFilter);
+    //     if (keyIncl || valueIncl) {
+    //       return true;
+    //     }
+    //   }
+    // }
+    //
+    // const branches = project.branches;
+    // for (let i = 0; i < branches.length; i++) {
+    //   const branch = branches[i];
+    //   const toCheck = [
+    //     branch.projectId,
+    //     branch.projectName,
+    //     branch.name,
+    //     branch.url,
+    //     branch.lastCommitCreatedAt,
+    //     branch.gitLabConfig,
+    //     branch.groupId,
+    //     branch.artifactId,
+    //     branch.revision,
+    //     branch.parent?.artifactId,
+    //     branch.parent?.version,
+    //     this.getErrors(project)
+    //   ];
+    //   const checkBranchProps = this.filter(toCheck, commonFilter);
+    //   if (checkBranchProps) {
+    //     return checkBranchProps;
+    //   }
+    // }
 
-    const branches = project.branches;
-    for (let i = 0; i < branches.length; i++) {
-      const branch = branches[i];
-      const toCheck = [
-        branch.name,
-        branch.lastCommitCreatedAt,
-        branch.gitLabConfig,
-        branch.groupId,
-        branch.artifactId,
-        branch.parent?.artifactId,
-        branch.parent?.version,
-        this.getErrors(project)
-      ];
-      const checkBranchProps = this.filter(toCheck, commonFilter);
-      if (checkBranchProps) {
-        return checkBranchProps;
-      }
-    }
-
-    return false;
+    // return false;
+    return true;
   }
 
   filter(propertiesToCheck: any[], filter: string) {
@@ -718,11 +741,7 @@ export class BranchesComponent implements OnInit, OnDestroy {
   }
 
   higlightError(error: ModelError) {
-    return this.displayTextUtils.highlightError(error)
-  }
-
-  goToGitLabProjectDetails(project: GitLabProject): void {
-    this.router.navigate(['/gitlab-project', project.projectId]);
+    return this.displayTextUtils.highlightError(PREFIX_COOKIE, error)
   }
 
   ngOnDestroy() {
@@ -738,8 +757,11 @@ export class BranchesComponent implements OnInit, OnDestroy {
     }
   }
 
-  getName(row : any) {
-    console.log(row)
-    return "";
+  protected readonly Number = Number;
+
+  getProjectUrl(branch: Branch) {
+    const branchUrl = branch.url;
+    return branchUrl.replace('/-/tree/'.concat(branch.name), '');
   }
+
 }

@@ -4,7 +4,7 @@ export const enum BranchColumnId {
   ARTIFACT_ID = "artifactId",
   GROUP_ID = "groupId",
   REVISION = "revision",
-  JDK = "jdk",
+  JDK = "jdks",
   LAST_COMMIT_DATETIME = "lastCommitCreatedAt",
   ERRORS = "errors",
   ALL = "all",
@@ -30,9 +30,9 @@ export const columnSettings: Record<BranchColumnId, Column> = {
   [BranchColumnId.BRANCH_NAME]: createColumn(BranchColumnId.BRANCH_NAME, "Name"),
   [BranchColumnId.ARTIFACT_ID]: createColumn(BranchColumnId.ARTIFACT_ID, "Artifact Id"),
   [BranchColumnId.GROUP_ID]: createColumn(BranchColumnId.GROUP_ID, "Group Id"),
-  [BranchColumnId.LAST_COMMIT_DATETIME]: createColumn(BranchColumnId.LAST_COMMIT_DATETIME, "Last activity"),
   [BranchColumnId.REVISION]: createColumn(BranchColumnId.REVISION, "Revision"),
   [BranchColumnId.JDK]: createColumn(BranchColumnId.JDK, "jdk"),
+  [BranchColumnId.LAST_COMMIT_DATETIME]: createColumn(BranchColumnId.LAST_COMMIT_DATETIME, "Last activity"),
   [BranchColumnId.ERRORS]: createColumn(BranchColumnId.ERRORS, "Errors"),
-  [BranchColumnId.ALL]: createColumn(BranchColumnId.ALL, "All"),
+  [BranchColumnId.ALL]: createColumn(BranchColumnId.ALL, "All")
 };
