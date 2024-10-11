@@ -23,6 +23,7 @@ import {Error} from '../../model/errors';
 import {DisplayTextUtils, getDays} from '../../util/displayTextUtils';
 import {Filter} from '../../model/filters';
 import {ResizableModule} from '../../components/resizable/resizable.module';
+import { ActivatedRoute, Router } from '@angular/router';
 
 
 const DEFAULT_ITEMS_PER_PAGE = 5;
@@ -132,7 +133,9 @@ export class BranchesComponent implements OnInit, OnDestroy {
   displayTextUtils: DisplayTextUtils;
 
   constructor(private projectService: ProjectService,
-              private cookieService: CookieService
+              private cookieService: CookieService,
+              private route: ActivatedRoute,
+              private router: Router
   ) {
     this.displayTextUtils = new DisplayTextUtils(this.cookieService);
     this.lastCommitedAtFrom = Number(this.getValueFromCookie(BranchColumnId.LAST_COMMIT_DATETIME.concat('_from'))) || 0;
@@ -143,6 +146,7 @@ export class BranchesComponent implements OnInit, OnDestroy {
     this.setInitialValues();
     this.loadBranches();
     this.subscribeToChanges();
+
   }
 
   subscribeToChanges() {
@@ -213,6 +217,12 @@ export class BranchesComponent implements OnInit, OnDestroy {
 
     // use regex
     this.useRegex = this.cookieService.getCookie(this.valueWithPrefix('userRegex')) === 'true' || false;
+
+    // params
+    const projectId = this.route.snapshot.queryParams['projectId'];
+    if (projectId) {
+      this.saveToCookie('projectIdFilter', projectId);
+    }
   }
 
   valueWithPrefix(value: string) {
@@ -534,6 +544,10 @@ export class BranchesComponent implements OnInit, OnDestroy {
       const matchesErrors = allErrors || selectedErrors.length === 0 || this.isErrorsSelected(errors, selectedErrors);
       const matchesCommonFilter = this.isCommonFilterMatched(branch, commonFilter.toLowerCase());
 
+      // from params
+      const projectId = this.route.snapshot.queryParams['projectId'];
+      const matchesProjectId = projectId == null || branch.projectId.toString() === projectId;
+
       return (
         matchesProjectName &&
         matchesName &&
@@ -542,7 +556,8 @@ export class BranchesComponent implements OnInit, OnDestroy {
         matchesLastActivity &&
         matchesRevision &&
         matchesErrors &&
-        matchesCommonFilter
+        matchesCommonFilter &&
+        matchesProjectId
       );
     });
     const sortBy = this.cookieService.getCookie(this.valueWithPrefix('sortBy'));
@@ -762,6 +777,25 @@ export class BranchesComponent implements OnInit, OnDestroy {
   getProjectUrl(branch: Branch) {
     const branchUrl = branch.url;
     return branchUrl.replace('/-/tree/'.concat(branch.name), '');
+  }
+
+  resetFileters() {
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.PROJECT));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.BRANCH_NAME));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.ARTIFACT_ID));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.GROUP_ID));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.REVISION));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.JDK));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.LAST_COMMIT_DATETIME).concat('_from'));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(BranchColumnId.LAST_COMMIT_DATETIME).concat('_to'));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat('errors'));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat(COMMON_FILTER));
+    this.cookieService.deleteCookie(PREFIX_COOKIE.concat('useRegex'));
+    this.router.navigate(['/branches']);
+    this.filteredData = this.branches;
+    this.selectedErrors = [];
+    this.errorForm.setValue([])
+    this.applyFilters();
   }
 
 }

@@ -310,8 +310,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         });
       }
     });
-    console.log(this.projects)
-
     errorMap.set(ALL, 'All errors');
 
     const cookiedErrors = this.cookieService.getCookie(this.valueWithPrefix(ProjectColumnId.ERRORS))?.split(',') || [];
@@ -912,11 +910,5 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // onColumnResize(event: Event, columnId: ProjectColumnId) {
-  //   const target = event.target as HTMLElement;
-  //   const width = target.style.width;
-  //   if (width) {
-  //     this.saveToCookie(PREFIX_COOKIE + columnId + '_width', width);
-  //   }
-  // }
+
 }
