@@ -1,232 +1,244 @@
-<h1>Branches
-</h1>
+<!-- title -->
+<h1>Branches</h1>
 
-<div class="d-flex flex-row justify-content-between">
+<!-- filters and search  -->
+<div class="filters-container">
   <!-- Search  -->
-  <div class="common-filter-container">
+  <div class="common-filter-container filter-item">
     <mat-form-field>
       <mat-label>Search</mat-label>
-      <input #inputField matInput placeholder="Type to search..."
+      <input #inputField matInput
+             placeholder="Type to search..."
              [value]="getValueFromCookie('commonFilter')"
              (keyup)="applyCommonFilter(inputField.value)">
     </mat-form-field>
-    <mat-checkbox [checked]="getUseRegex()" (change)="useRegexChange($event)">
-      Use regular expression
+    <mat-checkbox [checked]="getUseRegex()"
+                  (change)="useRegexChange($event)"
+                  matTooltip="Use regular expression">
     </mat-checkbox>
   </div>
 
-</div>
+  <!--  clear filters -->
+  <button mat-stroked-button
+          class="reset-filters-btn filter-item"
+          (click)="resetFileters()">Clear filters
+  </button>
 
-<div class="pagination-container">
-  <!-- pagination -->
-  <div class="pagination">
-    <div class="filed-container">
-      <mat-form-field class="drop-down-selection">
-        <mat-label>Items per page</mat-label>
-        <mat-select [(value)]="selectedItemsPerPageOption"
-                    (selectionChange)="onItemsPerPageChange()">
-          <mat-option *ngFor="let option of itemsPerPageOptions" [value]="option">
-            {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-      <!-- Input field for custom items per page, only shown when 'Custom' is selected -->
-      <div *ngIf="selectedItemsPerPageOption === 'custom'">
-        <mat-form-field appearance="fill">
-          <mat-label>Enter items per page</mat-label>
-          <input matInput type="number"
-                 min="0"
-                 [(ngModel)]="customRowsPerPage"
-                 (change)="onCustomRowsChange($event)">
-        </mat-form-field>
-      </div>
-      <ng-template #allItems>
-  <span>
-    {{ paginatedData.length }} items
-  </span>
-      </ng-template>
-    </div>
-    <!--  items per page -->
-    <div>
-      <button class="btn btn-light"
-              [disabled]="currentPage === 1"
-              (click)="changePage(-1)">
-        <mat-icon aria-hidden="false"
-                  aria-label="Pagination left btn"
-                  fontIcon="keyboard_arrow_left">
-        </mat-icon>
-      </button>
-      <span class="mx-2">
-      {{ getPaginationStartIndex() }} - {{ getPaginationEndIndex() }} of {{ getTotalItems() }}
-    </span>
-      <button class="btn btn-light"
-              [disabled]="currentPage === getTotalPages()"
-              (click)="changePage(+1)">
-        <mat-icon aria-hidden="false"
-                  aria-label="Pagination right btn"
-                  fontIcon="keyboard_arrow_right">
-        </mat-icon>
-      </button>
-    </div>
-  </div>
+  <!-- select columns -->
+  <mat-form-field class="drop-down-selection select-columns filter-item">
+    <mat-label>Columns</mat-label>
+    <mat-select [formControl]="columnsForm" multiple>
 
-  <div class="filter-container">
+      <mat-select-trigger>
+        {{ getSelectedColumns().length }}/ {{ columns.length - 1 }}
+      </mat-select-trigger>
 
-    <button mat-button class="reset-filters-btn"
-            (click)="resetFileters()">Reset filters</button>
+      <mat-option *ngFor="let column of columns"
+                  [value]="column"
+                  (click)="toggleColumnSelection(column.id)">
+        {{ column.label }}
+      </mat-option>
 
-    <!-- select columns -->
-    <mat-form-field class="drop-down-selection">
-      <mat-label>Columns</mat-label>
-      <mat-select [formControl]="columnsForm" multiple>
-
-        <mat-select-trigger>
-          {{ getSelectedColumns().length }}/ {{ columns.length - 1 }}
-        </mat-select-trigger>
-
-        <mat-option *ngFor="let column of columns"
-                    [value]="column"
-                    (click)="toggleColumnSelection(column.id)">
-          {{ column.label }}
-        </mat-option>
-
-      </mat-select>
-    </mat-form-field>
-  </div>
+    </mat-select>
+  </mat-form-field>
 
 </div>
 
-<table mat-table [dataSource]="paginatedData">
-  <ng-container *ngFor="let column of selectedColumns;" [matColumnDef]="column.id">
-    <th mat-header-cell *matHeaderCellDef resizable [id]="'b_' + column.id">
-      <div class="table-header-cell">
-        <!--  select errors  -->
-        <ng-container *ngIf="column.id === 'errors'">
-          <mat-form-field class="drop-down-selection">
-            <mat-label>Errors</mat-label>
-            <mat-select [formControl]="errorForm" multiple>
+<!-- table -->
+<div class="table-container">
+  <table mat-table [dataSource]="paginatedData">
+    <ng-container *ngFor="let column of selectedColumns;"
+                  [matColumnDef]="column.id">
+      <th mat-header-cell
+          *matHeaderCellDef
+          resizable
+          [id]="'b_' + column.id">
+        <div class="table-header-cell">
+          <!--  select errors  -->
+          <ng-container *ngIf="column.id === 'errors'">
+            <mat-form-field class="drop-down-selection">
+              <mat-label>Errors</mat-label>
+              <mat-select [formControl]="errorForm" multiple>
+                <mat-select-trigger>
+                  {{ getSelectedErrorCodes() }}
+                </mat-select-trigger>
+                <mat-option *ngFor="let error of errors"
+                            [value]="error"
+                            (click)="toggleErrorSelection(error.code)">
+                  {{ error.code }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
 
-              <mat-select-trigger>
-                {{ getSelectedErrorCodes() }}
-              </mat-select-trigger>
+          <!-- select jdk -->
+          <ng-container *ngIf="column.id === 'jdks'">
+            <mat-form-field class="drop-down-selection">
+              <mat-label>JDK</mat-label>
+              <mat-select [formControl]="errorForm"
+                          multiple>
+                <mat-select-trigger>
+                  {{ getSelectedErrors() }}
+                </mat-select-trigger>
 
-              <mat-option *ngFor="let error of errors"
-                          [value]="error"
-                          (click)="toggleErrorSelection(error.code)">
-                {{ error.code }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </ng-container>
+                <mat-option *ngFor="let jdk of errors"
+                            [value]="jdk"
+                            (click)="toggleErrorSelection(jdk.code)">
+                  {{ jdk.code }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
 
-        <!-- select jdk -->
-        <ng-container *ngIf="column.id === 'jdks'">
-          <mat-form-field class="drop-down-selection">
-            <mat-label>JDK</mat-label>
-            <mat-select [formControl]="errorForm" multiple>
-              <mat-select-trigger>
-                {{ getSelectedErrors() }}
-              </mat-select-trigger>
+          <!-- last commit at in days-->
+          <ng-container *ngIf="column.id === 'lastCommitCreatedAt'">
+            <!-- Min last activity days -->
+            <mat-form-field>
+              <mat-label>Last activity from</mat-label>
+              <input #minInputField matInput
+                     placeholder="Last activity from"
+                     min="0"
+                     type="number"
+                     [(ngModel)]="lastCommitedAtFrom"
+                     (keyup)="saveToCookie(column.id.concat('_from'), lastCommitedAtFrom.toString())"
+                     [value]="getValueFromCookie(column.id.concat('_from'))">
+            </mat-form-field>
 
-              <mat-option *ngFor="let jdk of errors"
-                          [value]="jdk"
-                          (click)="toggleErrorSelection(jdk.code)">
-                {{ jdk.code }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </ng-container>
+            <hr/>
 
-        <!-- last commit at in days-->
-        <ng-container *ngIf="column.id === 'lastCommitCreatedAt'">
-          <!-- Min last activity days -->
-          <mat-form-field>
-            <mat-label>Last activity from</mat-label>
-            <input #minInputField matInput
-                   placeholder="Last activity from"
-                   min="0"
-                   type="number"
-                   [(ngModel)]="lastCommitedAtFrom"
-                   (keyup)="saveToCookie(column.id.concat('_from'), lastCommitedAtFrom.toString())"
-                   [value]="getValueFromCookie(column.id.concat('_from'))">
-          </mat-form-field>
+            <!-- Max last activity days -->
+            <mat-form-field>
+              <mat-label>Last activity to</mat-label>
+              <input #maxInputField
+                     matInput
+                     placeholder="Last activity to"
+                     min="0"
+                     type="number"
+                     [(ngModel)]="lastCommitedAtTo"
+                     (keyup)="saveToCookie(column.id.concat('_to'), lastCommitedAtTo !== null ? lastCommitedAtTo.toString() : '')"
+                     [value]="getValueFromCookie(column.id.concat('_to'))">
+            </mat-form-field>
+          </ng-container>
 
-          <hr/>
+          <!-- any -->
+          <ng-container *ngIf="column.id !== 'errors' && column.id !== 'lastCommitCreatedAt' && column.id !== 'jdks'">
+            <mat-form-field>
+              <mat-label>{{ column.label }}</mat-label>
+              <input #inputField matInput [placeholder]="column.label"
+                     [value]="getValueFromCookie(column.id)"
+                     (keyup)="saveToCookie(column.id, inputField.value)">
+            </mat-form-field>
+          </ng-container>
 
-          <!-- Max last activity days -->
-          <mat-form-field>
-            <mat-label>Last activity to</mat-label>
-            <input #maxInputField matInput
-                   placeholder="Last activity to"
-                   min="0"
-                   type="number"
-                   [(ngModel)]="lastCommitedAtTo"
-                   (keyup)="saveToCookie(column.id.concat('_to'), lastCommitedAtTo !== null ? lastCommitedAtTo.toString() : '')"
-                   [value]="getValueFromCookie(column.id.concat('_to'))">
-          </mat-form-field>
-        </ng-container>
-
-        <!-- any -->
-        <ng-container *ngIf="column.id !== 'errors' && column.id !== 'lastCommitCreatedAt' && column.id !== 'jdks'">
-          <mat-form-field>
-            <mat-label>{{ column.label }}</mat-label>
-            <input #inputField matInput [placeholder]="column.label"
-                   [value]="getValueFromCookie(column.id)"
-                   (keyup)="saveToCookie(column.id, inputField.value)">
-          </mat-form-field>
-        </ng-container>
-
-        <!-- sort -->
-        <div class="header-sort">
-          <mat-icon aria-hidden="false"
-                    aria-label="sort up btn"
-                    fontIcon="keyboard_arrow_up"
-                    (click)="sortData(column.id, 'asc')"
-                    [style.color]="(sortColumn === column.id && sortDirection === 'asc') ? '#005b8b' : '#d3d1d1'">
-          </mat-icon>
-          <mat-icon aria-hidden="false"
-                    aria-label="sort down btn"
-                    fontIcon="keyboard_arrow_down"
-                    (click)="sortData(column.id, 'desc')"
-                    [style.color]="(sortColumn === column.id && sortDirection === 'desc') ? '#005b8b' : '#d3d1d1'">
-          </mat-icon>
+          <!-- sort -->
+          <div class="header-sort">
+            <mat-icon aria-hidden="false"
+                      aria-label="sort up btn"
+                      fontIcon="keyboard_arrow_up"
+                      (click)="sortData(column.id, 'asc')"
+                      [style.color]="(sortColumn === column.id && sortDirection === 'asc') ? '#005b8b' : '#d3d1d1'">
+            </mat-icon>
+            <mat-icon aria-hidden="false"
+                      aria-label="sort down btn"
+                      fontIcon="keyboard_arrow_down"
+                      (click)="sortData(column.id, 'desc')"
+                      [style.color]="(sortColumn === column.id && sortDirection === 'desc') ? '#005b8b' : '#d3d1d1'">
+            </mat-icon>
+          </div>
         </div>
-      </div>
-    </th>
+      </th>
 
-    <ng-container *ngIf="column.id === 'projectName'">
-      <td mat-cell *matCellDef="let row">
-        <a [href]="getProjectUrl(row)" [matTooltip]="getProjectUrl(row)">{{ row.projectName }}</a>
-      </td>
-    </ng-container>
+      <ng-container *ngIf="column.id === 'projectName'">
+        <td mat-cell *matCellDef="let row">
+          <a [href]="getProjectUrl(row)"
+             [matTooltip]="getProjectUrl(row)">
+            {{ row.projectName }}
+          </a>
+        </td>
+      </ng-container>
 
-    <ng-container *ngIf="column.id === 'name'">
-      <td mat-cell *matCellDef="let row">
-        <a [href]="row.url" [matTooltip]="row.url">{{ row.name }}</a>
-      </td>
-    </ng-container>
+      <ng-container *ngIf="column.id === 'name'">
+        <td mat-cell *matCellDef="let row">
+          <a [href]="row.url"
+             [matTooltip]="row.url">
+            {{ row.name }}
+          </a>
+        </td>
+      </ng-container>
 
-    <ng-container *ngIf="column.id === 'errors'">
-      <td mat-cell *matCellDef="let row">
+      <ng-container *ngIf="column.id === 'errors'">
+        <td mat-cell *matCellDef="let row">
     <span *ngFor="let error of getErrorValues(row); let last = last"
           [matTooltip]="error.message"
           matTooltipPosition="above"
           [innerHTML]="higlightError(error) + (!last ? ',' : '')">
     </span>
-      </td>
+        </td>
+      </ng-container>
+
+      <ng-container *ngIf="column.id !== 'errors' && column.id !== 'projectName' && column.id !== 'name'">
+        <td mat-cell *matCellDef="let row">
+          <!--        <span [innerHTML]="highlightText(getRowValue(row, column.id), column.id)"></span>-->
+          {{ getRowValue(row, column.id) }}
+        </td>
+      </ng-container>
+
     </ng-container>
 
-    <ng-container *ngIf="column.id !== 'errors' && column.id !== 'projectName' && column.id !== 'name'">
-      <td mat-cell *matCellDef="let row">
-        <!--        <span [innerHTML]="highlightText(getRowValue(row, column.id), column.id)"></span>-->
-        {{ getRowValue(row, column.id) }}
-      </td>
-    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="selectedColumnIds"></tr>
+    <tr mat-row *matRowDef="let row; columns: selectedColumnIds"
+        [ngClass]="{'archived': row.archived}"></tr>
 
-  </ng-container>
+  </table>
+</div>
 
-  <tr mat-header-row *matHeaderRowDef="selectedColumnIds"></tr>
-  <tr mat-row *matRowDef="let row; columns: selectedColumnIds"
-      [ngClass]="{'archived': row.archived}"></tr>
+<!-- pagination -->
+<div class="pagination">
+  <div class="filed-container">
+    <mat-form-field class="drop-down-selection items-per-page">
+      <mat-label>Items per page</mat-label>
+      <mat-select [(value)]="selectedItemsPerPageOption"
+                  (selectionChange)="onItemsPerPageChange()">
+        <mat-option *ngFor="let option of itemsPerPageOptions"
+                    [value]="option">
+          {{ option === 'all' ? 'All' : option === 'custom' ? 'Custom' : option }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    <!-- Input field for custom items per page, only shown when 'Custom' is selected -->
+    <div *ngIf="selectedItemsPerPageOption === 'custom'">
+      <mat-form-field appearance="fill">
+        <mat-label>Enter items per page</mat-label>
+        <input matInput type="number"
+               min="0"
+               [(ngModel)]="customRowsPerPage"
+               (change)="onCustomRowsChange($event)">
+      </mat-form-field>
+    </div>
+    <ng-template #allItems>
+  <span>
+    {{ paginatedData.length }} items
+  </span>
+    </ng-template>
+  </div>
+  <!--  items per page -->
+  <div>
+    <button [disabled]="currentPage === 1"
+            (click)="changePage(-1)">
+      <mat-icon aria-hidden="false"
+                aria-label="Pagination left btn"
+                fontIcon="keyboard_arrow_left">
+      </mat-icon>
+    </button>
 
-</table>
+    {{ getPaginationStartIndex() }} - {{ getPaginationEndIndex() }} of {{ getTotalItems() }}
+
+    <button [disabled]="currentPage === getTotalPages()"
+            (click)="changePage(+1)">
+      <mat-icon aria-hidden="false"
+                aria-label="Pagination right btn"
+                fontIcon="keyboard_arrow_right">
+      </mat-icon>
+    </button>
+  </div>
+</div>

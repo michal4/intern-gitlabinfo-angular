@@ -23,7 +23,7 @@ import {Error} from '../../model/errors';
 import {DisplayTextUtils, getDays} from '../../util/displayTextUtils';
 import {Filter} from '../../model/filters';
 import {ResizableModule} from '../../components/resizable/resizable.module';
-import { ActivatedRoute, Router } from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 
 
 const DEFAULT_ITEMS_PER_PAGE = 5;
@@ -441,8 +441,18 @@ export class BranchesComponent implements OnInit, OnDestroy {
         this.sortDirection = dist === 'asc' ? 'asc' : 'desc';
         this.sortColumnSubject.next(this.sortColumn);
         this.sortOrderSubject.next(this.sortDirection);
-
-        if (columnId !== BranchColumnId.ERRORS) {
+        if (columnId === BranchColumnId.LAST_COMMIT_DATETIME) {
+          this.filteredData.sort((a, b) => {
+            const valueA = this.getRowValue(a, columnId);
+            const valueB = this.getRowValue(b, columnId);
+            const numA = Number(valueA);
+            const numB = Number(valueB);
+            if (isNaN(numA) && isNaN(numB)) return 0;
+            if (isNaN(numA)) return 1;
+            if (isNaN(numB)) return -1
+            return (numA - numB) * (dist === 'asc' ? 1 : -1);
+          });
+        } else if (columnId !== BranchColumnId.ERRORS) {
           this.filteredData.sort((a, b) => {
             const valueA = this.getRowValue(a, columnId)?.toString().toLowerCase() ?? '';
             const valueB = this.getRowValue(b, columnId)?.toString().toLowerCase() ?? '';
@@ -460,6 +470,10 @@ export class BranchesComponent implements OnInit, OnDestroy {
         }
       }
     }
+    
+    // todo
+    // always branches with null values for this columnId pass to the end
+
     this.updatePaginatedData();
   }
 

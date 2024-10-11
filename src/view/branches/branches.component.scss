@@ -1,11 +1,39 @@
-.pagination, .filed-container, .table-header-cell {
+//filters
+.filters-container {
   display: inline-flex;
+  width: 100%;
   align-items: center;
+  justify-content: flex-start;
+
+  .filter-item:nth-last-child(2) {
+    margin-left: auto;
+    margin-right: 1vw;
+  }
+
+  input {
+    width: 40vw;
+  }
 }
 
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
+.select-columns {
+  width: 160px !important;
+}
+
+
+// table
+.table-container {
+  max-height: 80vh;
+  width: 99vw;
+  border: 1px solid rgba(99, 99, 99, 0.5);
+  overflow-y: auto;
+  padding: 0;
+  margin: 2vh 0;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .header-sort {
@@ -39,6 +67,18 @@ th, td {
   border-right: 0.5px solid rgba(128, 128, 128, 0.5);
 }
 
+th {
+  background-color: rgb(230, 230, 230) !important;
+}
+
+.table-container {
+  background-color: white;
+}
+
+hr {
+  width: 20px;
+}
+
 ::ng-deep .table-header-cell, {
   justify-content: space-between;
   padding: 10px 0;
@@ -62,24 +102,32 @@ th, td {
   height: 0;
 }
 
-th {
-  background-color: rgba(128, 128, 128, 0.1) !important;
 
+// pagination
+.pagination, .filed-container, .table-header-cell {
+  display: inline-flex;
+  align-items: center;
 }
 
-.drop-down-selection {
-  min-width: 180px;
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
 }
 
-table {
-  padding: 4vh 0;
+.pagination {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  padding: 20px;
 
-  .drop-down-selection {
-    min-width: 120px;
+  button, div{
+    border: none;
+    display: inline-flex;
+    align-items: center;
   }
 
-}
+  .items-per-page {
+    width: 150px !important;
+  }
 
-hr {
-  width: 20px;
 }
