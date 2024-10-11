@@ -13,14 +13,14 @@ export interface Filter {
 export const archivedSelectSettings: Record<ArchivedType, Filter> = {
   [ArchivedType.ALL]: {
     name: ArchivedType.ALL,
-    selected: false,
+    selected: true,
   },
   [ArchivedType.ARCHIVED]: {
     name: ArchivedType.ARCHIVED,
-    selected: false,
+    selected: true,
   },
   [ArchivedType.LIVE]: {
     name: ArchivedType.LIVE,
-    selected: false,
+    selected: true,
   }
 };

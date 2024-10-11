@@ -19,7 +19,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatDividerModule} from '@angular/material/divider'; // <-- Add MatDividerModule
 import {Router} from '@angular/router';
-import {Column, ProjectColumnId, columnSettings} from '../../model/project-columns';
+import {Column, columnSettings, ProjectColumnId} from '../../model/project-columns';
 import {Error} from '../../model/errors';
 import {DisplayTextUtils} from '../../util/displayTextUtils';
 import {archivedSelectSettings, ArchivedType, Filter} from '../../model/filters';
@@ -180,7 +180,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.setKinds();
         this.setErrors();
         this.setPageSize();
-        this.applyColumnWidths();
         this.applyFilters();
       }
     );
@@ -192,16 +191,19 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
     // columns
     const selectedColumns = this.cookieService.getCookie(this.valueWithPrefix(COLUMNS));
-    if (selectedColumns) {
-      const selectedColumnIds = selectedColumns.split(",");
-      this.columns.forEach(column => {
-        column.selected = selectedColumnIds.includes(column.id);
-      });
-      const allSelected = this.getSelectedColumns().length;
-      let all = this.columns.filter(c => c.id === ProjectColumnId.ALL)[0];
-      all.selected = allSelected - 1 === this.columns.length;
-      this.selectedColumnIds = this.columns.filter(c => c.selected).map(c => c.id);
+    let defaultColumns = false;
+    if (!selectedColumns) {
+      defaultColumns = true;
     }
+    const selectedColumnIds = selectedColumns?.split(",") ?? [];
+    this.columns.forEach(column => {
+      column.selected = selectedColumnIds.includes(column.id) || defaultColumns;
+    });
+    const allSelected = this.getSelectedColumns().length;
+    let all = this.columns.filter(c => c.id === ProjectColumnId.ALL)[0];
+    all.selected = allSelected - 1 === this.columns.length;
+    this.selectedColumnIds = this.columns.filter(c => c.selected).map(c => c.id);
+    this.applyColumnWidths();
 
     // sorting
     this.sortColumn = this.cookieService.getCookie(this.valueWithPrefix('sortBy')) || '';
@@ -212,11 +214,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       this.sort.direction = sortState.direction;
       this.sort.sortChange.emit(sortState);
     }
-
-    // use regex
     this.useRegex = this.cookieService.getCookie(this.valueWithPrefix('userRegex')) === 'true' || false;
-
-    // archived types
     this.setPossibleArchived();
   }
 
@@ -265,10 +263,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.cookieService.setCookie(this.valueWithPrefix(ProjectColumnId.ERRORS), selectedErrors.length ? selectedErrors : '');
 
     // archived types
-    const selectedArchivedTypes = this.archivedTypes
+    let selectedArchivedTypes = this.archivedTypes
       .filter(type => type.selected)
       .map(type => type.name).join(",");
-    this.cookieService.setCookie(this.valueWithPrefix(ARCHIVED), selectedArchivedTypes.length ? selectedArchivedTypes : '');
+    if (selectedArchivedTypes.length === this.archivedTypes.length - 1) {
+      selectedArchivedTypes += ArchivedType.ALL;
+    }
+    this.cookieService.setCookie(this.valueWithPrefix(ARCHIVED), selectedArchivedTypes ? selectedArchivedTypes : '');
   }
 
   setKinds() {
@@ -330,15 +331,23 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   setPossibleArchived() {
     const cookiedArhived = this.cookieService.getCookie(this.valueWithPrefix(ARCHIVED))?.split(',') || [];
+    let isDefault = false;
+    if (cookiedArhived.length === 0) {
+      isDefault = true;
+    }
     for (let i = 0; i < this.archivedTypes.length; i++) {
       const archived = this.archivedTypes[i];
-      this.archivedTypes[i].selected = cookiedArhived.includes(archived.name);
+      this.archivedTypes[i].selected = cookiedArhived.includes(archived.name) || isDefault;
       if (!this.archivedSubjects[archived.name]) {
         this.archivedSubjects[archived.name] = new Subject<void>();
       }
       this.archivedSubjects[archived.name].pipe(takeUntil(this.destroy$)).subscribe(() => this.updateCookie());
     }
     const selectedArchived = this.archivedTypes.filter(t => t.selected);
+    if (selectedArchived.length == this.archivedTypes.length - 1) {
+    }
+    console.log(this.archivedTypes)
+    //todo (not selected all option)
     this.archivedForm.setValue(selectedArchived);
   }
 
@@ -372,9 +381,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   applyColumnWidths() {
+    const selectedColumns = this.columns.filter(c => c.selected);
     const totalWidth = window.innerWidth;
-    const defaultWidth = totalWidth / this.selectedColumns.length + 1;
-    let columns = this.selectedColumns.map(c => c.id.toString()) ?? [];
+    const defaultWidth = totalWidth / selectedColumns?.length + 1;
+    let columns = selectedColumns.map(c => c.id.toString()) ?? [];
     columns.push('actions');
     columns.forEach(id => {
       const savedWidth = this.getWidthFromCookie(id);
@@ -632,9 +642,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     const useRegex = this.cookieService.getCookie(this.valueWithPrefix('useRegex')) === 'true';
     const selectedKinds = this.getSelectedKinds();
     let selectedErrors = this.getSelectedErrors();
-    const selectedArchived = this.getSelectedArchived();
-    const mustBeLive = selectedArchived.filter(a => a.name === ArchivedType.LIVE).length > 0;
-    const allArchivedType = selectedArchived.filter(a => a.name === ArchivedType.ALL).length > 0;
+    const selectedArchived = (this.cookieService.getCookie(this.valueWithPrefix(ARCHIVED)))?.split(',') ?? [];
+    const allArchivedType = selectedArchived.includes(ArchivedType.ALL);
     const allKinds = selectedKinds.filter(a => a.name === ALL).length > 0;
     const allErrors = selectedErrors.filter(e => e.code === ALL).length > 0;
 
@@ -663,7 +672,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       let errors = projectErrors.split(',').filter(error => error.trim() !== '') ?? [];
       const matchesErrors = allErrors || selectedErrors.length === 0 || this.isErrorsSelected(errors, selectedErrors);
       const isArchived = project.archived;
-      const matchesArchived = allArchivedType || (mustBeLive && !isArchived || !mustBeLive && isArchived);
+      const matchesArchived = allArchivedType ||
+        isArchived && selectedArchived.includes(ArchivedType.ARCHIVED) && selectedArchived.length === 1 ||
+        !isArchived && selectedArchived.includes(ArchivedType.LIVE) && selectedArchived.length === 1;
       const matchesCommonFilter = this.isCommonFilterMatched(project, commonFilter.toLowerCase());
 
       return (
@@ -678,6 +689,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         matchesCommonFilter
       );
     });
+
     // sort
     const sortBy = this.cookieService.getCookie(this.valueWithPrefix('sortBy'));
     const sortDest = this.cookieService.getCookie(this.valueWithPrefix('sortDest'));
