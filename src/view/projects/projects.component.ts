@@ -34,6 +34,7 @@ export enum DropdownType {
   KIND = 'kindOpen',
   ERRORS = 'errorsOpen'
 }
+// <- @hejny Using enums is not a good idea, use @see https://www.youtube.com/watch?v=jjMbPt_H3RQ
 
 export const ARCHIVED = 'archived';
 export const COMMON_FILTER = 'commonFilter';

@@ -11,6 +11,7 @@ export const enum ProjectColumnId {
 
 // Define the Column interface
 export interface Column {
+//      <- @hejny Decide between types and interfaces and probbably use types @see https://www.youtube.com/watch?v=zM9UPcIyyhQ
   id: ProjectColumnId;
   label: string;
   selected: boolean;

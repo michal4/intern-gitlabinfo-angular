@@ -33,11 +33,12 @@ export enum DropdownType {
   COLUMNS = 'columnsOpen',
   ERRORS = 'errorsOpen'
 }
+// <- @hejny Using enums is not a good idea, use @see https://www.youtube.com/watch?v=jjMbPt_H3RQ
 
 export const COMMON_FILTER = 'commonFilter';
 export const COLUMNS = 'columns';
 export const ALL = 'All';
-export const PREFIX_COOKIE = 'b_';
+export const PREFIX_COOKIE = 'b_' as const;
 
 
 @Component({

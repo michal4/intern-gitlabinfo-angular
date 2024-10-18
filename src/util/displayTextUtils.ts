@@ -5,10 +5,11 @@ import {CookieService} from '../service/cookie.service';
 
 export class DisplayTextUtils {
 
-  constructor(private cookieService: CookieService) {
+  public constructor(private cookieService: CookieService) {
   }
 
-  highlight(cookiePrefix: string, text: string, columnId: string, useRegex: boolean): string {
+  public highlight(cookiePrefix: string, text: string, columnId: string, useRegex: boolean): string {
+  // <- @hejny Explicitly say public/private/protected for all members of all classes
     if (text === '' || columnId === ProjectColumnId.KINDS) {
       return text;
     }
@@ -68,7 +69,7 @@ export class DisplayTextUtils {
     return highlightedText;
   }
 
-  getCommonSubstring(str1: string, str2: string, common: string): string | null {
+  public getCommonSubstring(str1: string, str2: string, common: string): string | null {
     const startIndex1 = common.indexOf(str1)
     const endIndex1 = startIndex1 + str1.length;
     const startIndex2 = common.indexOf(str2)
@@ -101,7 +102,7 @@ export class DisplayTextUtils {
     return commonPart.length > 0 ? commonPart : null;
   }
 
-  getTrueSubstrings(text: string, charArray: boolean[]): string[] {
+  public getTrueSubstrings(text: string, charArray: boolean[]): string[] {
     const substrings: string[] = [];
     let currentSubstring: string = "";
 
@@ -123,7 +124,7 @@ export class DisplayTextUtils {
     return substrings;
   }
 
-  highlightError(cookiePrefix: string, error: ModelError) {
+  public highlightError(cookiePrefix: string, error: ModelError) {
     const selectedErrosPlain = this.cookieService.getCookie(cookiePrefix.concat(ProjectColumnId.ERRORS));
     if (!selectedErrosPlain) {
       return error.code;
@@ -135,7 +136,7 @@ export class DisplayTextUtils {
     return error.code;
   }
 
-  getBranchRowValue(branch: Branch, columnId: string): string {
+  public getBranchRowValue(branch: Branch, columnId: string): string {
     switch (columnId) {
       case BranchColumnId.PROJECT:
         return branch.projectName ?? '';
@@ -146,7 +147,7 @@ export class DisplayTextUtils {
     }
   }
 
-  getProjectRowValue(project: GitLabProject, columnId: string): string {
+  public getProjectRowValue(project: GitLabProject, columnId: string): string {
     switch (columnId) {
       case ProjectColumnId.DEFAULT_BRANCH:
         return project.defaultBranch?.name ?? '';
@@ -161,7 +162,7 @@ export class DisplayTextUtils {
     }
   }
 
-  getErrors(row: any) {
+  public public getErrors(row: any) {
     const parentErrors = this.formatErrors(row.errors || []);
     const childrenErrors = this.formatErrors(row.defaultBranch?.errors || []);
     if (parentErrors.length === 0) {

@@ -4,8 +4,10 @@ export enum ArchivedType {
   ARCHIVED = 'Archived projects',
   LIVE = 'Live projects'
 }
+// <- @hejny Using enums is not a good idea, use @see https://www.youtube.com/watch?v=jjMbPt_H3RQ
 
 export interface Filter {
+//      <- @hejny Decide between types and interfaces and probbably use types @see https://www.youtube.com/watch?v=zM9UPcIyyhQ
   name: string;
   selected: boolean;
 }
