@@ -14,6 +14,7 @@ export const APP_ROUTES: Routes = [
     path: "branches",
     loadComponent: () => import("../view/branches/branches.component")
       .then((m) => m.BranchesComponent),
+      //     <- @hejny Some naming is meaningless and probably should be done better.
   },
   {
     path: "gitlab-project/:id",

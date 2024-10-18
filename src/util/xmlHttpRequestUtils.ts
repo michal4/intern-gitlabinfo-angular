@@ -2,14 +2,17 @@ import { environment } from "../environments/environment";
 
 /**
  * Util pro konkrétní HttpRequest dotaz.
+ * <- @hejny Annotations should probably be in English.
  */
 export class XmlHttpRequestUtils {
+    
 
     /**
      * Základní načtení apiBasePath přes XMLHttpRequest. (AppConfigService je inicializována až později)
      */
     public static getApiBasePathXMLHttpRequest(): string {
         let request = new XMLHttpRequest();
+        //             <- @hejny Use fetch NOT XMLHttpRequest
         request.open('GET', environment.configPath, false);
         request.send(null);
         const response = JSON.parse(request.responseText);
@@ -21,6 +24,7 @@ export class XmlHttpRequestUtils {
      */
     public static isIndexHtmlExist(): boolean {
         let request = new XMLHttpRequest();
+        //             <- @hejny Use fetch NOT XMLHttpRequest
         request.open('GET', environment.indexPath, false);
 
         let isIndex: boolean = false;
